@@ -1,9 +1,9 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
-from scipy.signal import get_window
-from librosa.util import pad_center
 from librosa.filters import mel as librosa_mel_fn
+from librosa.util import pad_center
+from scipy.signal import get_window
 
 from audio.audio_processing import (
     dynamic_range_compression,
@@ -16,7 +16,7 @@ class STFT(torch.nn.Module):
     """adapted from Prem Seetharaman's https://github.com/pseeth/pytorch-stft"""
 
     def __init__(self, filter_length, hop_length, win_length, window="hann"):
-        super(STFT, self).__init__()
+        super().__init__()
         self.filter_length = filter_length
         self.hop_length = hop_length
         self.win_length = win_length
@@ -25,7 +25,7 @@ class STFT(torch.nn.Module):
         scale = self.filter_length / self.hop_length
         fourier_basis = np.fft.fft(np.eye(self.filter_length))
 
-        cutoff = int((self.filter_length / 2 + 1))
+        cutoff = int(self.filter_length / 2 + 1)
         fourier_basis = np.vstack(
             [np.real(fourier_basis[:cutoff, :]), np.imag(fourier_basis[:cutoff, :])]
         )
@@ -139,7 +139,7 @@ class TacotronSTFT(torch.nn.Module):
         mel_fmin,
         mel_fmax,
     ):
-        super(TacotronSTFT, self).__init__()
+        super().__init__()
         self.n_mel_channels = n_mel_channels
         self.sampling_rate = sampling_rate
         self.stft_fn = STFT(filter_length, hop_length, win_length)

@@ -37,7 +37,61 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pyrefly>=1.0.0",
+    "ruff>=0.15.14",
 ]
+
+[tool.ruff]
+# Target Python version 3.14 to match project requires-python
+target-version = "py314"
+
+# Set standard line length
+line-length = 100
+
+# Files and directories to exclude
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "preprocessed_data",
+]
+
+[tool.ruff.lint]
+# Select rules:
+# E/W: pycodestyle
+# F: Pyflakes
+# I: isort (automatic import sorting)
+# UP: pyupgrade (modernize syntax)
+# B: flake8-bugbear (common design bugs)
+# C4: flake8-comprehensions
+# SIM: flake8-simplify
+# A: flake8-builtins
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "C4",
+    "SIM",
+    "A",
+]
+
+# Rule exclusions
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "E731",  # Do not assign a lambda expression, use a def
+    "E402",  # Module level import not at top of file
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
 
 
 

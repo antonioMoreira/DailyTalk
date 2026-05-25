@@ -1,24 +1,21 @@
 import math
-import torch
-from torch import nn, einsum
-from torch.nn import functional as F
-from torch.autograd.function import Function
-from torch.utils.checkpoint import get_device_states, set_device_states
-import numpy as np
-from einops import repeat
-from operator import mul
 from functools import partial, reduce, wraps
+from operator import mul
+
+import torch
 from local_attention import LocalAttention
 from product_key_memory import PKM
+from torch import nn
+from torch.autograd.function import Function
+from torch.nn import functional as F
+from torch.utils.checkpoint import get_device_states, set_device_states
 
 from text.symbols import symbols
 
-from .constants import PAD
 from .blocks import (
     get_sinusoid_encoding_table,
-    LinearNorm,
 )
-
+from .constants import PAD
 
 TOKEN_SELF_ATTN_VALUE = -5e4 # carefully set for half precision to work
 
@@ -125,7 +122,7 @@ class TextEncoder(nn.Module):
     """ Text Encoder """
 
     def __init__(self, config):
-        super(TextEncoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         n_src_vocab = len(symbols) + 1
@@ -193,7 +190,7 @@ class Decoder(nn.Module):
     """ Decoder """
 
     def __init__(self, config):
-        super(Decoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         d_word_vec = config["transformer"]["decoder_hidden"]

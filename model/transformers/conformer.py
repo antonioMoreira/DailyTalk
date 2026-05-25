@@ -1,27 +1,26 @@
 import math
+
 import torch
 import torch.nn as nn
 from torch import Tensor
-from typing import Optional
-import numpy as np
 from torch.nn import functional as F
 
 from text.symbols import symbols
 
-from .constants import PAD
 from .blocks import (
-    get_sinusoid_encoding_table,
-    Swish,
     GLU,
     LinearNorm,
+    Swish,
+    get_sinusoid_encoding_table,
 )
+from .constants import PAD
 
 
 class TextEncoder(nn.Module):
     """ Text Encoder """
 
     def __init__(self, config):
-        super(TextEncoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         n_src_vocab = len(symbols) + 1
@@ -92,7 +91,7 @@ class Decoder(nn.Module):
     """ Decoder """
 
     def __init__(self, config):
-        super(Decoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         d_word_vec = config["conformer"]["decoder_hidden"]
@@ -196,7 +195,7 @@ class ConformerBlock(nn.Module):
             position_enc: Tensor = None,
             max_seq_len: int = 10000,
     ):
-        super(ConformerBlock, self).__init__()
+        super().__init__()
         if half_step_residual:
             self.feed_forward_residual_factor = 0.5
         else:
@@ -252,7 +251,7 @@ class ResidualConnectionModule(nn.Module):
     outputs = (module(inputs) x module_factor + inputs x input_factor)
     """
     def __init__(self, module: nn.Module, module_factor: float = 1.0, input_factor: float = 1.0):
-        super(ResidualConnectionModule, self).__init__()
+        super().__init__()
         self.module = module
         self.module_factor = module_factor
         self.input_factor = input_factor
@@ -281,7 +280,7 @@ class FeedForwardModule(nn.Module):
             expansion_factor: int = 4,
             dropout_p: float = 0.1,
     ) -> None:
-        super(FeedForwardModule, self).__init__()
+        super().__init__()
         self.sequential = nn.Sequential(
             nn.LayerNorm(encoder_dim),
             LinearNorm(encoder_dim, encoder_dim * expansion_factor, bias=True),
@@ -314,8 +313,8 @@ class MultiHeadedSelfAttentionModule(nn.Module):
     Returns:
         - **outputs** (batch, time, dim): Tensor produces by relative multi headed self attention module.
     """
-    def __init__(self, d_model: int, num_heads: int, dropout_p: float = 0.1, position_enc: Optional[Tensor] = None, max_seq_len: int = 10000):
-        super(MultiHeadedSelfAttentionModule, self).__init__()
+    def __init__(self, d_model: int, num_heads: int, dropout_p: float = 0.1, position_enc: Tensor | None = None, max_seq_len: int = 10000):
+        super().__init__()
         self.d_model = d_model
         self.max_seq_len = max_seq_len
         self.positional_encoding = position_enc
@@ -323,7 +322,7 @@ class MultiHeadedSelfAttentionModule(nn.Module):
         self.attention = RelativeMultiHeadAttention(d_model, num_heads, dropout_p)
         self.dropout = nn.Dropout(p=dropout_p)
 
-    def forward(self, inputs: Tensor, mask: Optional[Tensor] = None):
+    def forward(self, inputs: Tensor, mask: Tensor | None = None):
         batch_size, seq_length, _ = inputs.size()
 
         # -- Forward
@@ -367,7 +366,7 @@ class RelativeMultiHeadAttention(nn.Module):
             num_heads: int = 16,
             dropout_p: float = 0.1,
     ):
-        super(RelativeMultiHeadAttention, self).__init__()
+        super().__init__()
         assert d_model % num_heads == 0, "d_model % num_heads should be zero."
         self.d_model = d_model
         self.d_head = int(d_model / num_heads)
@@ -393,7 +392,7 @@ class RelativeMultiHeadAttention(nn.Module):
             key: Tensor,
             value: Tensor,
             pos_embedding: Tensor,
-            mask: Optional[Tensor] = None,
+            mask: Tensor | None = None,
     ) -> Tensor:
         batch_size = value.size(0)
 
@@ -452,7 +451,7 @@ class ConformerConvModule(nn.Module):
             expansion_factor: int = 2,
             dropout_p: float = 0.1,
     ) -> None:
-        super(ConformerConvModule, self).__init__()
+        super().__init__()
         assert (kernel_size - 1) % 2 == 0, "kernel_size should be a odd number for 'SAME' padding"
         assert expansion_factor == 2, "Currently, Only Supports expansion_factor 2"
 
@@ -475,7 +474,7 @@ class ConformerConvModule(nn.Module):
 class Transpose(nn.Module):
     """ Wrapper class of torch.transpose() for Sequential module. """
     def __init__(self, shape: tuple):
-        super(Transpose, self).__init__()
+        super().__init__()
         self.shape = shape
 
     def forward(self, x: Tensor) -> Tensor:
@@ -505,7 +504,7 @@ class PointwiseConv1d(nn.Module):
             padding: int = 0,
             bias: bool = True,
     ) -> None:
-        super(PointwiseConv1d, self).__init__()
+        super().__init__()
         self.conv = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -544,7 +543,7 @@ class DepthwiseConv1d(nn.Module):
             padding: int = 0,
             bias: bool = False,
     ) -> None:
-        super(DepthwiseConv1d, self).__init__()
+        super().__init__()
         assert out_channels % in_channels == 0, "out_channels should be constant multiple of in_channels"
         self.conv = nn.Conv1d(
             in_channels=in_channels,

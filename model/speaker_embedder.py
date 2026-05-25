@@ -1,9 +1,5 @@
-import os
-import json
 
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from deepspeaker import embedding
 
@@ -12,7 +8,7 @@ class PreDefinedEmbedder(nn.Module):
     """ Speaker Embedder Wrapper """
 
     def __init__(self, config):
-        super(PreDefinedEmbedder, self).__init__()
+        super().__init__()
         self.sampling_rate = config["preprocessing"]["audio"]["sampling_rate"]
         self.win_length = config["preprocessing"]["stft"]["win_length"]
         self.embedder_type = config["preprocessing"]["speaker_embedder"]

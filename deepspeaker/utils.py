@@ -1,6 +1,5 @@
 import logging
 import os
-import random
 import shutil
 from glob import glob
 

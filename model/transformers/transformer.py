@@ -1,22 +1,22 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 from torch.nn import functional as F
 
 from text.symbols import symbols
 
-from .constants import PAD
 from .blocks import (
-    get_sinusoid_encoding_table,
     LinearNorm,
+    get_sinusoid_encoding_table,
 )
+from .constants import PAD
 
 
 class TextEncoder(nn.Module):
     """ Text Encoder """
 
     def __init__(self, config):
-        super(TextEncoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         n_src_vocab = len(symbols) + 1
@@ -87,7 +87,7 @@ class Decoder(nn.Module):
     """ Decoder """
 
     def __init__(self, config):
-        super(Decoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         d_word_vec = config["transformer"]["decoder_hidden"]
@@ -158,7 +158,7 @@ class FFTBlock(nn.Module):
     """ FFT Block """
 
     def __init__(self, d_model, n_head, d_k, d_v, d_inner, kernel_size, dropout=0.1):
-        super(FFTBlock, self).__init__()
+        super().__init__()
         self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
         self.pos_ffn = PositionwiseFeedForward(
             d_model, d_inner, kernel_size, dropout=dropout
@@ -182,7 +182,7 @@ class MultiHeadAttention(nn.Module):
     """ Multi-Head Attention """
 
     def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1, layer_norm=True):
-        super(MultiHeadAttention, self).__init__()
+        super().__init__()
 
         self.n_head = n_head
         self.d_k = d_k
@@ -236,7 +236,7 @@ class ScaledDotProductAttention(nn.Module):
     """ Scaled Dot-Product Attention """
 
     def __init__(self, temperature):
-        super(ScaledDotProductAttention, self).__init__()
+        super().__init__()
         self.temperature = temperature
         self.softmax = nn.Softmax(dim=2)
 
@@ -258,7 +258,7 @@ class PositionwiseFeedForward(nn.Module):
     """ A two-feed-forward-layer """
 
     def __init__(self, d_in, d_hid, kernel_size, dropout=0.1, layer_norm=True):
-        super(PositionwiseFeedForward, self).__init__()
+        super().__init__()
 
         # Use Conv1D
         # position-wise

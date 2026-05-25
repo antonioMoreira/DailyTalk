@@ -1,15 +1,13 @@
 import json
 import logging
 import os
-from collections import deque, Counter
+from collections import Counter, deque
 from random import choice
-from time import time
 
 import numpy as np
 from tqdm import tqdm
 
-from deepspeaker.audio_ds import pad_mfcc, Audio
-from deepspeaker.constants import NUM_FRAMES, NUM_FBANKS
+from deepspeaker.audio_ds import Audio, pad_mfcc
 from deepspeaker.conv_models import DeepSpeakerModel
 from deepspeaker.utils import train_test_sp_to_utt
 

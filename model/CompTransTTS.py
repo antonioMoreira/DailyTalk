@@ -1,23 +1,22 @@
-import os
 import json
+import os
 
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from .modules import PostNet, VarianceAdaptor, ConversationalContextEncoder
 from utils.tools import get_mask_from_lengths
+
+from .modules import ConversationalContextEncoder, PostNet, VarianceAdaptor
 
 
 class CompTransTTS(nn.Module):
     """ CompTransTTS """
 
     def __init__(self, preprocess_config, model_config, train_config):
-        super(CompTransTTS, self).__init__()
+        super().__init__()
         self.model_config = model_config
 
         if model_config["block_type"] == "transformer":
-            from .transformers.transformer import TextEncoder, Decoder
+            from .transformers.transformer import Decoder, TextEncoder
         # elif model_config["block_type"] == "lstransformer":
         #     from .transformers.lstransformer import TextEncoder, Decoder
         # elif model_config["block_type"] == "fastformer":
@@ -46,7 +45,6 @@ class CompTransTTS(nn.Module):
                     os.path.join(
                         preprocess_config["path"]["preprocessed_path"], "speakers.json"
                     ),
-                    "r",
                 ) as f:
                     n_speaker = len(json.load(f))
                 self.speaker_emb = nn.Embedding(
@@ -63,7 +61,6 @@ class CompTransTTS(nn.Module):
                 os.path.join(
                     preprocess_config["path"]["preprocessed_path"], "emotions.json"
                 ),
-                "r",
             ) as f:
                 n_emotion = len(json.load(f))
             self.emotion_emb = nn.Embedding(

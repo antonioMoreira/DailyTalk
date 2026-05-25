@@ -1,5 +1,5 @@
-import os
 import logging
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class IdentityBlock(nn.Module):
     def __init__(self, filters, kernel_size=3):
-        super(IdentityBlock, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(filters, filters, kernel_size=kernel_size, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(filters)
         self.conv2 = nn.Conv2d(filters, filters, kernel_size=kernel_size, stride=1, padding=1)
@@ -31,7 +31,7 @@ class IdentityBlock(nn.Module):
 
 class ConvAndResBlock(nn.Module):
     def __init__(self, in_filters, out_filters):
-        super(ConvAndResBlock, self).__init__()
+        super().__init__()
         self.conv = nn.Conv2d(in_filters, out_filters, kernel_size=5, stride=2, padding=2)
         self.bn = nn.BatchNorm2d(out_filters)
         self.res_blocks = nn.Sequential(
@@ -50,7 +50,7 @@ class ConvAndResBlock(nn.Module):
 
 class DeepSpeakerModel(nn.Module):
     def __init__(self):
-        super(DeepSpeakerModel, self).__init__()
+        super().__init__()
         self.block1 = ConvAndResBlock(1, 64)
         self.block2 = ConvAndResBlock(64, 128)
         self.block3 = ConvAndResBlock(128, 256)
@@ -63,22 +63,22 @@ class DeepSpeakerModel(nn.Module):
             x = x.unsqueeze(-1)
         # Permute to PyTorch Conv2D format (B, Channels, Height, Width) -> (B, 1, T, F)
         x = x.permute(0, 3, 1, 2)
-        
+
         out = self.block1(x)
         out = self.block2(out)
         out = self.block3(out)
         out = self.block4(out)
-        
+
         # Permute back to (B, T_final, F_final, Channels)
         out = out.permute(0, 2, 3, 1)
         B, T_final, F_final, C = out.shape
         out = out.reshape(B, T_final, F_final * C)  # (B, T_final, 2048)
-        
+
         # Temporal Average over time dimension (dim=1)
         out = torch.mean(out, dim=1)  # (B, 2048)
-        
+
         out = self.affine(out)
-        
+
         # L2 Normalize
         out = F.normalize(out, p=2, dim=1)
         return out
@@ -87,7 +87,7 @@ class DeepSpeakerModel(nn.Module):
 def load_weights_from_h5(model, h5_path):
     import h5py
     import numpy as np
-    
+
     logger.info(f"Loading weights from legacy Keras H5 file: {h5_path} into PyTorch model...")
     with h5py.File(h5_path, 'r') as f:
         def get_data(layer_name, weight_name):
@@ -102,23 +102,23 @@ def load_weights_from_h5(model, h5_path):
 
         blocks = [model.block1, model.block2, model.block3, model.block4]
         filters_list = [64, 128, 256, 512]
-        
+
         for stage_idx, (block, filters) in enumerate(zip(blocks, filters_list), start=1):
             conv_name = f"conv{filters}-s"
             bn_name = f"{conv_name}_bn"
-            
+
             # Conv weight mapping (transpose TF kernel shape (H, W, in, out) to PT shape (out, in, H, W))
             w_conv = get_data(conv_name, 'kernel:0')
             b_conv = get_data(conv_name, 'bias:0')
             block.conv.weight.data = torch.from_numpy(w_conv.transpose(3, 2, 0, 1)).float()
             block.conv.bias.data = torch.from_numpy(b_conv).float()
-            
+
             # BN weight mapping
             block.bn.weight.data = torch.from_numpy(get_data(bn_name, 'gamma:0')).float()
             block.bn.bias.data = torch.from_numpy(get_data(bn_name, 'beta:0')).float()
             block.bn.running_mean.data = torch.from_numpy(get_data(bn_name, 'moving_mean:0')).float()
             block.bn.running_var.data = torch.from_numpy(get_data(bn_name, 'moving_variance:0')).float()
-            
+
             # Identity blocks
             for i, res_block in enumerate(block.res_blocks):
                 branch_name = f"res{stage_idx}_{i}_branch"
@@ -126,7 +126,7 @@ def load_weights_from_h5(model, h5_path):
                 bn_2a = f"{conv_2a}_bn"
                 conv_2b = f"{branch_name}_2b"
                 bn_2b = f"{conv_2b}_bn"
-                
+
                 # conv1
                 w_c1 = get_data(conv_2a, 'kernel:0')
                 b_c1 = get_data(conv_2a, 'bias:0')
@@ -137,7 +137,7 @@ def load_weights_from_h5(model, h5_path):
                 res_block.bn1.bias.data = torch.from_numpy(get_data(bn_2a, 'beta:0')).float()
                 res_block.bn1.running_mean.data = torch.from_numpy(get_data(bn_2a, 'moving_mean:0')).float()
                 res_block.bn1.running_var.data = torch.from_numpy(get_data(bn_2a, 'moving_variance:0')).float()
-                
+
                 # conv2
                 w_c2 = get_data(conv_2b, 'kernel:0')
                 b_c2 = get_data(conv_2b, 'bias:0')
@@ -148,7 +148,7 @@ def load_weights_from_h5(model, h5_path):
                 res_block.bn2.bias.data = torch.from_numpy(get_data(bn_2b, 'beta:0')).float()
                 res_block.bn2.running_mean.data = torch.from_numpy(get_data(bn_2b, 'moving_mean:0')).float()
                 res_block.bn2.running_var.data = torch.from_numpy(get_data(bn_2b, 'moving_variance:0')).float()
-                
+
         # Affine Layer (transpose Dense shape (in, out) to PT shape (out, in))
         w_affine = get_data('affine', 'kernel:0')
         b_affine = get_data('affine', 'bias:0')

@@ -1,23 +1,20 @@
 import torch
-from torch import nn, einsum
-from einops import rearrange
-import numpy as np
+from torch import nn
 from torch.nn import functional as F
 
 from text.symbols import symbols
 
-from .constants import PAD
 from .blocks import (
     get_sinusoid_encoding_table,
-    LinearNorm,
 )
+from .constants import PAD
 
 
 class TextEncoder(nn.Module):
     """ Text Encoder """
 
     def __init__(self, config):
-        super(TextEncoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         n_src_vocab = len(symbols) + 1
@@ -74,7 +71,7 @@ class Decoder(nn.Module):
     """ Decoder """
 
     def __init__(self, config):
-        super(Decoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         d_word_vec = config["transformer"]["decoder_hidden"]
@@ -141,7 +138,7 @@ class FFTBlock(torch.nn.Module):
     """FFT Block"""
 
     def __init__(self, depth, d_model, n_head, d_head, d_inner, kernel_size, dropout=0.1):
-        super(FFTBlock, self).__init__()
+        super().__init__()
 
         self.layers = nn.ModuleList([])
         for _ in range(depth):
@@ -257,7 +254,7 @@ class FastAttention(nn.Module):
     """ wuch15's Fastformer Attention module (Official) """
 
     def __init__(self, dim, dim_head, heads, dropout=0.1, initializer_range=0.02):
-        super(FastAttention, self).__init__()
+        super().__init__()
 
         self.initializer_range = initializer_range
         if dim % dim_head != 0:

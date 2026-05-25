@@ -1,6 +1,6 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 from torch.nn import functional as F
 
 
@@ -33,8 +33,8 @@ class Swish(nn.Module):
     to a variety of challenging domains such as Image classification and Machine translation.
     """
     def __init__(self):
-        super(Swish, self).__init__()
-    
+        super().__init__()
+
     def forward(self, inputs):
         return inputs * inputs.sigmoid()
 
@@ -45,7 +45,7 @@ class GLU(nn.Module):
     in the paper “Language Modeling with Gated Convolutional Networks”
     """
     def __init__(self, dim: int) -> None:
-        super(GLU, self).__init__()
+        super().__init__()
         self.dim = dim
 
     def forward(self, inputs):
@@ -57,13 +57,13 @@ class LinearNorm(nn.Module):
     """ LinearNorm Projection """
 
     def __init__(self, in_features, out_features, bias=False):
-        super(LinearNorm, self).__init__()
+        super().__init__()
         self.linear = nn.Linear(in_features, out_features, bias)
 
         nn.init.xavier_uniform_(self.linear.weight)
         if bias:
             nn.init.constant_(self.linear.bias, 0.0)
-    
+
     def forward(self, x):
         x = self.linear(x)
         return x
@@ -73,7 +73,7 @@ class ConvBlock(nn.Module):
     """ Convolutional Block """
 
     def __init__(self, in_channels, out_channels, kernel_size, dropout, activation=nn.ReLU()):
-        super(ConvBlock, self).__init__()
+        super().__init__()
 
         self.conv_layer = nn.Sequential(
             ConvNorm(
@@ -117,7 +117,7 @@ class ConvNorm(nn.Module):
         w_init_gain="linear",
         transpose=False,
     ):
-        super(ConvNorm, self).__init__()
+        super().__init__()
 
         if padding is None:
             assert kernel_size % 2 == 1

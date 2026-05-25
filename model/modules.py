@@ -1,27 +1,24 @@
-import os
 import json
-import copy
-import math
+import os
 from collections import OrderedDict
 
+import numpy as np
 import torch
 import torch.nn as nn
-from numba import jit, prange
-import numpy as np
 import torch.nn.functional as F
+from numba import jit, prange
 
 from utils.tools import (
-    get_variance_level,
-    get_phoneme_level_pitch,
-    get_phoneme_level_energy,
     get_mask_from_lengths,
-    pad_1D,
+    get_phoneme_level_energy,
+    get_phoneme_level_pitch,
+    get_variance_level,
     pad,
+    pad_1D,
 )
-from text.symbols import symbols
+
+from .transformers.blocks import ConvNorm, LinearNorm, Swish, get_sinusoid_encoding_table
 from .transformers.transformer import MultiHeadAttention, PositionwiseFeedForward
-from .transformers.constants import PAD
-from .transformers.blocks import get_sinusoid_encoding_table, Swish, LinearNorm, ConvNorm, ConvBlock
 
 
 @jit(nopython=True)
@@ -79,7 +76,7 @@ class PostNet(nn.Module):
         postnet_n_convolutions=5,
     ):
 
-        super(PostNet, self).__init__()
+        super().__init__()
         self.convolutions = nn.ModuleList()
 
         self.convolutions.append(
@@ -143,7 +140,7 @@ class VarianceAdaptor(nn.Module):
     """ Variance Adaptor """
 
     def __init__(self, preprocess_config, model_config, train_config):
-        super(VarianceAdaptor, self).__init__()
+        super().__init__()
         self.duration_predictor = VariancePredictor(model_config)
         # self.duration_predictor = DurationPredictor(model_config)
         self.length_regulator = LengthRegulator()
@@ -172,7 +169,7 @@ class VarianceAdaptor(nn.Module):
         if self.use_conv_embedding:
             kernel_size = model_config["variance_embedding"]["kernel_size"]
             self.pitch_embedding = ConvNorm(
-                1, 
+                1,
                 model_config["transformer"]["encoder_hidden"],
                 kernel_size=kernel_size,
                 stride=1,
@@ -407,7 +404,7 @@ class VarianceAdaptor(nn.Module):
 class AlignmentEncoder(torch.nn.Module):
     """ Alignment Encoder for Unsupervised Duration Modeling """
 
-    def __init__(self, 
+    def __init__(self,
                 n_mel_channels,
                 n_att_channels,
                 n_text_channels,
@@ -519,7 +516,7 @@ class LengthRegulator(nn.Module):
     """ Length Regulator """
 
     def __init__(self):
-        super(LengthRegulator, self).__init__()
+        super().__init__()
 
     def LR(self, x, duration, max_len):
         output = list()
@@ -555,7 +552,7 @@ class DurationPredictor(nn.Module):
     """ Duration Predictor """
 
     def __init__(self, model_config, positive_out=True):
-        super(DurationPredictor, self).__init__()
+        super().__init__()
 
         self.d_model = model_config["transformer"]["encoder_hidden"]
         self.d_hidden = model_config["variance_predictor"]["cond_dur_hidden"]
@@ -629,7 +626,7 @@ class LayerCondFFTBlock(nn.Module):
     """ Layer Conditioning FFTBlock """
 
     def __init__(self, d_model, d_w, n_head, d_k, d_v, d_inner, kernel_size, dropout=0.1):
-        super(LayerCondFFTBlock, self).__init__()
+        super().__init__()
         self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout, layer_norm=False)
         self.pos_ffn = PositionwiseFeedForward(
             d_model, d_inner, kernel_size, dropout=dropout, layer_norm=False
@@ -657,11 +654,11 @@ class StyleAdaptiveLayerNorm(nn.Module):
     """ Style-Adaptive Layer Norm (SALN) """
 
     def __init__(self, w_size, hidden_size, bias=False):
-        super(StyleAdaptiveLayerNorm, self).__init__()
+        super().__init__()
         self.hidden_size = hidden_size
         self.affine_layer = LinearNorm(
             w_size,
-            2 * hidden_size, # For both b (bias) g (gain) 
+            2 * hidden_size, # For both b (bias) g (gain)
             bias,
         )
 
@@ -689,7 +686,7 @@ class VariancePredictor(nn.Module):
     """ Duration, Pitch and Energy Predictor """
 
     def __init__(self, model_config):
-        super(VariancePredictor, self).__init__()
+        super().__init__()
 
         self.input_size = model_config["transformer"]["encoder_hidden"]
         self.filter_size = model_config["variance_predictor"]["filter_size"]
@@ -751,7 +748,7 @@ class ConversationalContextEncoder(nn.Module):
     """ Conversational Context Encoder """
 
     def __init__(self, preprocess_config, model_config):
-        super(ConversationalContextEncoder, self).__init__()
+        super().__init__()
         d_model = model_config["transformer"]["encoder_hidden"]
         d_cont_enc = model_config["history_encoder"]["context_hidden"]
         num_layers = model_config["history_encoder"]["context_layer"]
@@ -765,7 +762,6 @@ class ConversationalContextEncoder(nn.Module):
             os.path.join(
                 preprocess_config["path"]["preprocessed_path"], "speakers.json"
             ),
-            "r",
         ) as f:
             n_speaker = len(json.load(f))
         self.speaker_embedding = nn.Embedding(
@@ -807,7 +803,7 @@ class ConversationalContextEncoder(nn.Module):
         history_enc = self.enc_linear(history_enc)
 
         # Split
-        enc_current, enc_past = torch.split(history_enc, self.max_history_len, dim=1) 
+        enc_current, enc_past = torch.split(history_enc, self.max_history_len, dim=1)
 
         # GRU
         enc_current = self.gru_linear(self.gru(enc_current)[0])
@@ -824,7 +820,7 @@ class SLA(nn.Module):
     """ Sequence Level Attention """
 
     def __init__(self, d_enc):
-        super(SLA, self).__init__()
+        super().__init__()
         self.linear = nn.Linear(d_enc, 1)
         self.softmax = nn.Softmax(dim=1)
 

@@ -9,7 +9,7 @@ class CompTransTTSLoss(nn.Module):
     """ CompTransTTS Loss """
 
     def __init__(self, preprocess_config, model_config, train_config):
-        super(CompTransTTSLoss, self).__init__()
+        super().__init__()
         self.loss_config = train_config["loss"]
         self.pitch_feature_level = preprocess_config["preprocessing"]["pitch"][
             "feature"

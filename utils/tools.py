@@ -1,7 +1,8 @@
 # Monkey-patch six to support PEP 451 under Python 3.14+
 try:
-    import six
     from importlib.machinery import ModuleSpec
+
+    import six
 
     # pyrefly: ignore [missing-attribute]
     if not hasattr(six._SixMetaPathImporter, "find_spec"):
@@ -16,33 +17,32 @@ try:
 except Exception:
     pass
 
-import os
 import json
-import yaml
+import os
 
+import matplotlib
+import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.cuda import amp
-import numpy as np
-import matplotlib
+import yaml
 
 matplotlib.use("Agg")
-from scipy.io import wavfile
-from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
+from scipy.interpolate import interp1d
+from scipy.io import wavfile
 from sklearn.manifold import TSNE
 
 
 def get_configs_of(dataset):
     config_dir = os.path.join("./config", dataset)
     preprocess_config = yaml.load(
-        open(os.path.join(config_dir, "preprocess.yaml"), "r"), Loader=yaml.FullLoader
+        open(os.path.join(config_dir, "preprocess.yaml")), Loader=yaml.FullLoader
     )
     model_config = yaml.load(
-        open(os.path.join(config_dir, "model.yaml"), "r"), Loader=yaml.FullLoader
+        open(os.path.join(config_dir, "model.yaml")), Loader=yaml.FullLoader
     )
     train_config = yaml.load(
-        open(os.path.join(config_dir, "train.yaml"), "r"), Loader=yaml.FullLoader
+        open(os.path.join(config_dir, "train.yaml")), Loader=yaml.FullLoader
     )
     return preprocess_config, model_config, train_config
 
@@ -264,7 +264,7 @@ def log(
         logger.add_scalar("Loss/pitch_loss", losses[3], step)
         logger.add_scalar("Loss/energy_loss", losses[4], step)
         for k, v in losses[5].items():
-            logger.add_scalar("Loss/{}_loss".format(k), v, step)
+            logger.add_scalar(f"Loss/{k}_loss", v, step)
         logger.add_scalar("Loss/ctc_loss", losses[6], step)
         logger.add_scalar("Loss/bin_loss", losses[7], step)
 
@@ -433,9 +433,9 @@ def synth_samples(
             fig_save_dir = os.path.join(
                 path,
                 str(args.restore_step),
-                "{}_{}{}.png".format(basename, args.speaker_id, emotion_tag)
+                f"{basename}_{args.speaker_id}{emotion_tag}.png"
                 if multi_speaker and args.mode == "single"
-                else "{}.png".format(basename),
+                else f"{basename}.png",
             )
         else:
             os.makedirs(
@@ -450,7 +450,7 @@ def synth_samples(
                 path,
                 str(args.restore_step),
                 basename.split("_")[-1].strip("d"),
-                "{}.png".format(basename),
+                f"{basename}.png",
             )
         fig = plot_mel(
             [
@@ -475,9 +475,9 @@ def synth_samples(
             wav_save_dir = os.path.join(
                 path,
                 str(args.restore_step),
-                "{}_{}{}.wav".format(basename, args.speaker_id, emotion_tag)
+                f"{basename}_{args.speaker_id}{emotion_tag}.wav"
                 if multi_speaker and args.mode == "single"
-                else "{}.wav".format(basename),
+                else f"{basename}.wav",
             )
         else:
             os.makedirs(
@@ -492,7 +492,7 @@ def synth_samples(
                 path,
                 str(args.restore_step),
                 basename.split("_")[-1].strip("d"),
-                "{}.wav".format(basename),
+                f"{basename}.wav",
             )
         wavfile.write(wav_save_dir, sampling_rate, wav)
 
@@ -654,7 +654,7 @@ def pad_1D(inputs, PAD=0, maxlen=None):
     if maxlen:
         padded = np.stack([pad_data(x, maxlen, PAD) for x in inputs])
     else:
-        max_len = max((len(x) for x in inputs))
+        max_len = max(len(x) for x in inputs)
         padded = np.stack([pad_data(x, max_len, PAD) for x in inputs])
 
     return padded

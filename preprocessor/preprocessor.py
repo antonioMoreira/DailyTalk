@@ -1,23 +1,22 @@
+import copy
+import json
 import os
 import random
 import re
-import json
-import copy
 
-import tgt
 import librosa
 import numpy as np
 import pyworld as pw
+import tgt
+from g2p_en import G2p
 from scipy.stats import betabinom
-from scipy.interpolate import interp1d
+from sentence_transformers import SentenceTransformer
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 import audio as Audio
-from text import text_to_sequence, sequence_to_text, grapheme_to_phoneme
-from utils.tools import get_phoneme_level_pitch, get_phoneme_level_energy
-from g2p_en import G2p
-from sentence_transformers import SentenceTransformer
+from text import grapheme_to_phoneme
+from utils.tools import get_phoneme_level_energy, get_phoneme_level_pitch
 
 
 class Preprocessor:
@@ -77,7 +76,7 @@ class Preprocessor:
         val_dialog_ids_prior = set()
         if os.path.isfile(val_prior_path):
             print("Load pre-defined validation set...")
-            with open(val_prior_path, "r", encoding="utf-8") as f:
+            with open(val_prior_path, encoding="utf-8") as f:
                 for m in f.readlines():
                     val_dialog_ids_prior.add(int(m.split("|")[0].split("_")[-1].strip("d")))
             return list(val_dialog_ids_prior)
@@ -158,7 +157,7 @@ class Preprocessor:
 
                 basename = wav_name.split(".")[0]
                 tg_path = os.path.join(
-                    self.out_dir, "TextGrid", speaker, "{}.TextGrid".format(basename)
+                    self.out_dir, "TextGrid", speaker, f"{basename}.TextGrid"
                 )
                 (
                     info_frame,
@@ -258,9 +257,7 @@ class Preprocessor:
             f.write(json.dumps(stats))
 
         print(
-            "Total time: {} hours".format(
-                n_frames * self.hop_length / self.sampling_rate / 3600
-            )
+            f"Total time: {n_frames * self.hop_length / self.sampling_rate / 3600} hours"
         )
 
         random.shuffle(train_frame)
@@ -311,8 +308,8 @@ class Preprocessor:
     def process_utterance(self, tg_path, speaker, basename):
         phone_out_exist, frame_out_exist = True, True
 
-        wav_path = os.path.join(self.in_dir, speaker, "{}.wav".format(basename))
-        text_path = os.path.join(self.in_dir, speaker, "{}.lab".format(basename))
+        wav_path = os.path.join(self.in_dir, speaker, f"{basename}.wav")
+        text_path = os.path.join(self.in_dir, speaker, f"{basename}.lab")
 
         speaker = basename.split("_")[1]
         dialog_id = basename.split("_")[-1].lstrip("d")
@@ -326,7 +323,7 @@ class Preprocessor:
         wav_raw, wav, duration = self.load_audio(wav_path)
 
         # Read raw text
-        with open(text_path, "r") as f:
+        with open(text_path) as f:
             raw_text = f.readline().strip("\n")
         phone = grapheme_to_phoneme(raw_text, self.g2p)
         phones = "{" + "}{".join(phone) + "}"
@@ -364,19 +361,19 @@ class Preprocessor:
             mel_spectrogram_frame = copy.deepcopy(mel_spectrogram)
 
             # Save files
-            text_emb_filename = "{}-text_emb-{}.npy".format(speaker, basename)
+            text_emb_filename = f"{speaker}-text_emb-{basename}.npy"
             np.save(os.path.join(self.out_dir, "text_emb", text_emb_filename), text_emb)
 
-            attn_prior_filename = "{}-attn_prior-{}.npy".format(speaker, basename)
+            attn_prior_filename = f"{speaker}-attn_prior-{basename}.npy"
             np.save(os.path.join(self.out_dir, "attn_prior", attn_prior_filename), attn_prior)
 
-            pitch_frame_filename = "{}-pitch-{}.npy".format(speaker, basename)
+            pitch_frame_filename = f"{speaker}-pitch-{basename}.npy"
             np.save(os.path.join(self.out_dir, "pitch_frame", pitch_frame_filename), pitch_frame)
 
-            energy_frame_filename = "{}-energy-{}.npy".format(speaker, basename)
+            energy_frame_filename = f"{speaker}-energy-{basename}.npy"
             np.save(os.path.join(self.out_dir, "energy_frame", energy_frame_filename), energy_frame)
 
-            mel_frame_filename = "{}-mel-{}.npy".format(speaker, basename)
+            mel_frame_filename = f"{speaker}-mel-{basename}.npy"
             np.save(
                 os.path.join(self.out_dir, "mel_frame", mel_frame_filename),
                 mel_spectrogram_frame.T,
@@ -423,19 +420,19 @@ class Preprocessor:
 
                     # Save files
                     if not frame_out_exist:
-                        text_emb_filename = "{}-text_emb-{}.npy".format(speaker, basename)
+                        text_emb_filename = f"{speaker}-text_emb-{basename}.npy"
                         np.save(os.path.join(self.out_dir, "text_emb", text_emb_filename), text_emb)
 
-                    dur_filename = "{}-duration-{}.npy".format(speaker, basename)
+                    dur_filename = f"{speaker}-duration-{basename}.npy"
                     np.save(os.path.join(self.out_dir, "duration", dur_filename), duration)
 
-                    pitch_phone_filename = "{}-pitch-{}.npy".format(speaker, basename)
+                    pitch_phone_filename = f"{speaker}-pitch-{basename}.npy"
                     np.save(os.path.join(self.out_dir, "pitch_phone", pitch_phone_filename), pitch_phone)
 
-                    energy_phone_filename = "{}-energy-{}.npy".format(speaker, basename)
+                    energy_phone_filename = f"{speaker}-energy-{basename}.npy"
                     np.save(os.path.join(self.out_dir, "energy_phone", energy_phone_filename), energy_phone)
 
-                    mel_phone_filename = "{}-mel-{}.npy".format(speaker, basename)
+                    mel_phone_filename = f"{speaker}-mel-{basename}.npy"
                     np.save(
                         os.path.join(self.out_dir, "mel_phone", mel_phone_filename),
                         mel_spectrogram_phone.T,

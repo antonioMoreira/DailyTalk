@@ -8,8 +8,8 @@ import numpy as np
 from python_speech_features import fbank
 from tqdm import tqdm
 
-from deepspeaker.constants import SAMPLE_RATE, NUM_FBANKS
-from deepspeaker.utils import find_files, ensures_dir
+from deepspeaker.constants import NUM_FBANKS, SAMPLE_RATE
+from deepspeaker.utils import ensures_dir, find_files
 
 logger = logging.getLogger(__name__)
 

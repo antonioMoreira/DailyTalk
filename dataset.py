@@ -1,5 +1,4 @@
 import json
-import math
 import os
 
 import numpy as np
@@ -52,27 +51,27 @@ class Dataset(Dataset):
         phone = np.array(text_to_sequence(self.text[idx], self.cleaners))
         mel_path = os.path.join(
             self.preprocessed_path,
-            "mel_{}".format(self.pitch_level_tag),
-            "{}-mel-{}.npy".format(speaker, basename),
+            f"mel_{self.pitch_level_tag}",
+            f"{speaker}-mel-{basename}.npy",
         )
         mel = np.load(mel_path)
         pitch_path = os.path.join(
             self.preprocessed_path,
-            "pitch_{}".format(self.pitch_level_tag),
-            "{}-pitch-{}.npy".format(speaker, basename),
+            f"pitch_{self.pitch_level_tag}",
+            f"{speaker}-pitch-{basename}.npy",
         )
         pitch = np.load(pitch_path)
         energy_path = os.path.join(
             self.preprocessed_path,
-            "energy_{}".format(self.energy_level_tag),
-            "{}-energy-{}.npy".format(speaker, basename),
+            f"energy_{self.energy_level_tag}",
+            f"{speaker}-energy-{basename}.npy",
         )
         energy = np.load(energy_path)
         if self.learn_alignment:
             attn_prior_path = os.path.join(
                 self.preprocessed_path,
                 "attn_prior",
-                "{}-attn_prior-{}.npy".format(speaker, basename),
+                f"{speaker}-attn_prior-{basename}.npy",
             )
             attn_prior = np.load(attn_prior_path)
             duration = None
@@ -80,14 +79,14 @@ class Dataset(Dataset):
             duration_path = os.path.join(
                 self.preprocessed_path,
                 "duration",
-                "{}-duration-{}.npy".format(speaker, basename),
+                f"{speaker}-duration-{basename}.npy",
             )
             duration = np.load(duration_path)
             attn_prior = None
         spker_embed = np.load(os.path.join(
             self.preprocessed_path,
             "spker_embed",
-            "{}-spker_embed.npy".format(speaker),
+            f"{speaker}-spker_embed.npy",
         )) if self.load_spker_embed else None
 
         # History
@@ -112,7 +111,7 @@ class Dataset(Dataset):
                 text_emb_path = os.path.join(
                     self.preprocessed_path,
                     "text_emb",
-                    "{}-text_emb-{}.npy".format(speaker, basename),
+                    f"{speaker}-text_emb-{basename}.npy",
                 )
                 text_emb = np.load(text_emb_path)
 
@@ -123,10 +122,10 @@ class Dataset(Dataset):
                     h_text_emb_path = os.path.join(
                         self.preprocessed_path,
                         "text_emb",
-                        "{}-text_emb-{}.npy".format(h_speaker, h_basename),
+                        f"{h_speaker}-text_emb-{h_basename}.npy",
                     )
                     h_text_emb = np.load(h_text_emb_path)
-                    
+
                     history_text_emb.append(h_text_emb)
                     history_speaker.append(h_speaker_id)
 
@@ -168,7 +167,7 @@ class Dataset(Dataset):
 
         return sample
 
-    def pad_history(self, 
+    def pad_history(self,
             pad_size,
             history_text=None,
             history_text_emb=None,
@@ -193,7 +192,7 @@ class Dataset(Dataset):
 
     def process_meta(self, filename):
         with open(
-            os.path.join(self.preprocessed_path, filename), "r", encoding="utf-8"
+            os.path.join(self.preprocessed_path, filename), encoding="utf-8"
         ) as f:
             name = []
             speaker = []
@@ -336,7 +335,7 @@ class TextDataset(Dataset):
         spker_embed = np.load(os.path.join(
             self.preprocessed_path,
             "spker_embed",
-            "{}-spker_embed.npy".format(speaker),
+            f"{speaker}-spker_embed.npy",
         )) if self.load_spker_embed else None
 
         # History
@@ -361,7 +360,7 @@ class TextDataset(Dataset):
                 text_emb_path = os.path.join(
                     self.preprocessed_path,
                     "text_emb",
-                    "{}-text_emb-{}.npy".format(speaker, basename),
+                    f"{speaker}-text_emb-{basename}.npy",
                 )
                 text_emb = np.load(text_emb_path)
 
@@ -372,10 +371,10 @@ class TextDataset(Dataset):
                     h_text_emb_path = os.path.join(
                         self.preprocessed_path,
                         "text_emb",
-                        "{}-text_emb-{}.npy".format(h_speaker, h_basename),
+                        f"{h_speaker}-text_emb-{h_basename}.npy",
                     )
                     h_text_emb = np.load(h_text_emb_path)
-                    
+
                     history_text_emb.append(h_text_emb)
                     history_speaker.append(h_speaker_id)
 
@@ -402,7 +401,7 @@ class TextDataset(Dataset):
 
         return (basename, speaker_id, phone, raw_text, spker_embed, emotion_id, history)
 
-    def pad_history(self, 
+    def pad_history(self,
             pad_size,
             history_text=None,
             history_text_emb=None,
@@ -426,7 +425,7 @@ class TextDataset(Dataset):
             history_mel_len.append(0) if history_mel_len is not None else None # meaningless zero padding, should be cut out by mask of history_len
 
     def process_meta(self, filename):
-        with open(filename, "r", encoding="utf-8") as f:
+        with open(filename, encoding="utf-8") as f:
             name = []
             speaker = []
             text = []

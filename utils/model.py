@@ -1,8 +1,8 @@
-import os
 import json
+import os
 
-import torch
 import numpy as np
+import torch
 
 import hifigan
 from model import CompTransTTS, ScheduledOptim
@@ -15,7 +15,7 @@ def get_model(args, configs, device, train=False):
     if args.restore_step:
         ckpt_path = os.path.join(
             train_config["path"]["ckpt_path"],
-            "{}.pth.tar".format(args.restore_step),
+            f"{args.restore_step}.pth.tar",
         )
         ckpt = torch.load(ckpt_path, map_location=device)
         model.load_state_dict(ckpt["model"])
@@ -55,7 +55,7 @@ def get_vocoder(config, device):
         vocoder.mel2wav.eval()
         vocoder.mel2wav.to(device)
     elif name == "HiFi-GAN":
-        with open("hifigan/config.json", "r") as f:
+        with open("hifigan/config.json") as f:
             config = json.load(f)
         config = hifigan.AttrDict(config)
         vocoder = hifigan.Generator(config)

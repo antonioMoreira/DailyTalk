@@ -1,7 +1,8 @@
 # Monkey-patch six to support PEP 451 under Python 3.14+
 try:
-    import six
     from importlib.machinery import ModuleSpec
+
+    import six
     # pyrefly: ignore [missing-attribute]
     if not hasattr(six._SixMetaPathImporter, "find_spec"):
         def find_spec(self, fullname, path, target=None):
@@ -15,8 +16,8 @@ except Exception:
 
 import argparse
 
-from utils.tools import get_configs_of
 from preprocessor import dailytalk
+from utils.tools import get_configs_of
 
 
 def main(config):

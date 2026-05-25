@@ -1,7 +1,8 @@
 # Monkey-patch six to support PEP 451 under Python 3.14+
 try:
-    import six
     from importlib.machinery import ModuleSpec
+
+    import six
 
     # pyrefly: ignore [missing-attribute]
     if not hasattr(six._SixMetaPathImporter, "find_spec"):
@@ -16,18 +17,13 @@ try:
 except Exception:
     pass
 
-import argparse
-import os
 
 import torch
-import yaml
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from utils.model import get_model, get_vocoder
-from utils.tools import get_variance_level, to_device, log, synth_one_sample
-from model import CompTransTTSLoss
 from dataset import Dataset
+from model import CompTransTTSLoss
+from utils.tools import get_variance_level, log, synth_one_sample, to_device
 
 
 def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=None):
@@ -36,7 +32,7 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=Non
     # Get dataset
     level_tag, *_ = get_variance_level(preprocess_config, model_config)
     dataset = Dataset(
-        "val_{}.txt".format(level_tag),
+        f"val_{level_tag}.txt",
         preprocess_config,
         model_config,
         train_config,
@@ -56,7 +52,7 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=Non
 
     # Evaluation
     loss_sums = [
-        {k: 0 for k in loss.keys()} if isinstance(loss, dict) else 0 for loss in losses
+        dict.fromkeys(loss.keys(), 0) if isinstance(loss, dict) else 0 for loss in losses
     ]
     for batchs in loader:
         for batch in batchs:
@@ -108,25 +104,25 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=Non
             log(
                 logger,
                 img=fig_attn,
-                tag="Validation_attn/step_{}_{}".format(step, tag),
+                tag=f"Validation_attn/step_{step}_{tag}",
             )
         log(
             logger,
             img=fig,
-            tag="Validation/step_{}_{}".format(step, tag),
+            tag=f"Validation/step_{step}_{tag}",
         )
         sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
         log(
             logger,
             audio=wav_reconstruction,
             sampling_rate=sampling_rate,
-            tag="Validation/step_{}_{}_reconstructed".format(step, tag),
+            tag=f"Validation/step_{step}_{tag}_reconstructed",
         )
         log(
             logger,
             audio=wav_prediction,
             sampling_rate=sampling_rate,
-            tag="Validation/step_{}_{}_synthesized".format(step, tag),
+            tag=f"Validation/step_{step}_{tag}_synthesized",
         )
 
     return message

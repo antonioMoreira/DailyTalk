@@ -1,19 +1,18 @@
 import functools
-from math import gcd, ceil
+from math import ceil, gcd
+
 import torch
-from torch import nn, einsum
-import numpy as np
-from torch.nn import functional as F
-from rotary_embedding_torch import RotaryEmbedding, apply_rotary_emb
 from einops import rearrange, repeat
+from rotary_embedding_torch import RotaryEmbedding, apply_rotary_emb
+from torch import einsum, nn
+from torch.nn import functional as F
 
 from text.symbols import symbols
 
-from .constants import PAD
 from .blocks import (
     get_sinusoid_encoding_table,
-    LinearNorm,
 )
+from .constants import PAD
 
 
 def exists(val):
@@ -52,7 +51,7 @@ class TextEncoder(nn.Module):
     """ Text Encoder """
 
     def __init__(self, config):
-        super(TextEncoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         n_src_vocab = len(symbols) + 1
@@ -109,7 +108,7 @@ class Decoder(nn.Module):
     """ Decoder """
 
     def __init__(self, config):
-        super(Decoder, self).__init__()
+        super().__init__()
 
         n_position = config["max_seq_len"] + 1
         d_word_vec = config["transformer"]["decoder_hidden"]
@@ -176,7 +175,7 @@ class FFTBlock(torch.nn.Module):
     """FFT Block"""
 
     def __init__(self, depth, d_model, n_head, d_head, d_inner, kernel_size, dropout=0.1, causal=True, segment_size=16, r=1):
-        super(FFTBlock, self).__init__()
+        super().__init__()
 
         segment_size = default(segment_size, 16 if causal else None)
         r = default(r, 1 if causal else 128)

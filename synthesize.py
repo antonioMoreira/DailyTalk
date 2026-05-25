@@ -1,7 +1,8 @@
 # Monkey-patch six to support PEP 451 under Python 3.14+
 try:
-    import six
     from importlib.machinery import ModuleSpec
+
+    import six
 
     # pyrefly: ignore [missing-attribute]
     if not hasattr(six._SixMetaPathImporter, "find_spec"):
@@ -16,22 +17,21 @@ try:
 except Exception:
     pass
 
-import re
-import os
-import json
 import argparse
+import json
+import os
+import re
 from string import punctuation
 
-import torch
-import yaml
 import numpy as np
-from torch.utils.data import DataLoader
+import torch
 from g2p_en import G2p
+from torch.utils.data import DataLoader
 
-from utils.model import get_model, get_vocoder
-from utils.tools import get_configs_of, to_device, synth_samples
 from dataset import TextDataset
 from text import text_to_sequence
+from utils.model import get_model, get_vocoder
+from utils.tools import get_configs_of, synth_samples, to_device
 
 
 def read_lexicon(lex_path):
@@ -62,8 +62,8 @@ def preprocess_english(text, preprocess_config):
     phones = re.sub(r"\{[^\w\s]?\}", "{sp}", phones)
     phones = phones.replace("}{", " ")
 
-    print("Raw Text Sequence: {}".format(text))
-    print("Phoneme Sequence: {}".format(phones))
+    print(f"Raw Text Sequence: {text}")
+    print(f"Phoneme Sequence: {phones}")
     sequence = np.array(
         text_to_sequence(
             phones, preprocess_config["preprocessing"]["text"]["text_cleaners"]
@@ -226,7 +226,7 @@ if __name__ == "__main__":
                 os.path.join(
                     preprocess_config["path"]["preprocessed_path"],
                     "spker_embed",
-                    "{}-spker_embed.npy".format(args.speaker_id),
+                    f"{args.speaker_id}-spker_embed.npy",
                 )
             )
             if load_spker_embed

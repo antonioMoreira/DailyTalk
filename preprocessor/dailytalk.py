@@ -22,10 +22,10 @@ def prepare_align(config):
                 continue
             base_name = file_name.replace(".wav", "")
             text_path = os.path.join(
-                in_dir, sub_dir, turn_name, "{}.txt".format(base_name)
+                in_dir, sub_dir, turn_name, f"{base_name}.txt"
             )
             wav_path = os.path.join(
-                in_dir, sub_dir, turn_name, "{}.wav".format(base_name)
+                in_dir, sub_dir, turn_name, f"{base_name}.wav"
             )
             with open(text_path) as f:
                 text = f.readline().strip("\n")
@@ -35,12 +35,12 @@ def prepare_align(config):
             wav, _ = librosa.load(wav_path, sampling_rate)
             wav = wav / max(abs(wav)) * max_wav_value
             wavfile.write(
-                os.path.join(out_dir, sub_dir, turn_name, "{}.wav".format(base_name)),
+                os.path.join(out_dir, sub_dir, turn_name, f"{base_name}.wav"),
                 sampling_rate,
                 wav.astype(np.int16),
             )
             with open(
-                os.path.join(out_dir, sub_dir, turn_name, "{}.lab".format(base_name)),
+                os.path.join(out_dir, sub_dir, turn_name, f"{base_name}.lab"),
                 "w",
             ) as f1:
                 f1.write(text)

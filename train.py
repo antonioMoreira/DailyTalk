@@ -1,7 +1,8 @@
 # Monkey-patch six to support PEP 451 under Python 3.14+
 try:
-    import six
     from importlib.machinery import ModuleSpec
+
+    import six
 
     # pyrefly: ignore [missing-attribute]
     if not hasattr(six._SixMetaPathImporter, "find_spec"):
@@ -20,29 +21,25 @@ import argparse
 import os
 
 import torch
-import yaml
-import torch.nn as nn
 import torch.multiprocessing as mp
-from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DistributedSampler, DataLoader
+from torch.cuda import amp
 from torch.distributed import init_process_group
 from torch.nn.parallel import DistributedDataParallel
-from torch.cuda import amp
-
+from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from utils.model import get_model, get_vocoder, get_param_num
+from dataset import Dataset
+from evaluate import evaluate
+from model import CompTransTTSLoss
+from utils.model import get_model, get_param_num, get_vocoder
 from utils.tools import (
     get_configs_of,
     get_variance_level,
-    to_device,
     log,
     synth_one_sample,
+    to_device,
 )
-from model import CompTransTTSLoss
-from dataset import Dataset
-
-from evaluate import evaluate
 
 torch.backends.cudnn.benchmark = True
 
@@ -56,12 +53,12 @@ def train(rank, args, configs, batch_size, num_gpus):
             world_size=train_config["dist_config"]["world_size"] * num_gpus,
             rank=rank,
         )
-    device = torch.device("cuda:{:d}".format(rank))
+    device = torch.device(f"cuda:{rank:d}")
 
     # Get dataset
     level_tag, *_ = get_variance_level(preprocess_config, model_config)
     dataset = Dataset(
-        "train_{}.txt".format(level_tag),
+        f"train_{level_tag}.txt",
         preprocess_config,
         model_config,
         train_config,
@@ -101,7 +98,7 @@ def train(rank, args, configs, batch_size, num_gpus):
     val_step = train_config["step"]["val_step"]
 
     if rank == 0:
-        print("Number of CompTransTTS Parameters: {}\n".format(get_param_num(model)))
+        print(f"Number of CompTransTTS Parameters: {get_param_num(model)}\n")
         # Init logger
         for p in train_config["path"].values():
             os.makedirs(p, exist_ok=True)
@@ -120,7 +117,7 @@ def train(rank, args, configs, batch_size, num_gpus):
     while train:
         if rank == 0:
             inner_bar = tqdm(
-                total=len(loader), desc="Epoch {}".format(epoch), position=1
+                total=len(loader), desc=f"Epoch {epoch}", position=1
             )
         if num_gpus > 1:
             data_sampler.set_epoch(epoch)
@@ -162,7 +159,7 @@ def train(rank, args, configs, batch_size, num_gpus):
                             sum(l.values()).item() if isinstance(l, dict) else l.item()
                             for l in losses
                         ]
-                        message1 = "Step {}/{}, ".format(step, total_step)
+                        message1 = f"Step {step}/{total_step}, "
                         message2 = "Total Loss: {:.4f}, Mel Loss: {:.4f}, Mel PostNet Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}, CTC Loss: {:.4f}, Binarization Loss: {:.4f}".format(
                             *losses_
                         )
@@ -188,12 +185,12 @@ def train(rank, args, configs, batch_size, num_gpus):
                             log(
                                 train_logger,
                                 img=fig_attn,
-                                tag="Training_attn/step_{}_{}".format(step, tag),
+                                tag=f"Training_attn/step_{step}_{tag}",
                             )
                         log(
                             train_logger,
                             img=fig,
-                            tag="Training/step_{}_{}".format(step, tag),
+                            tag=f"Training/step_{step}_{tag}",
                         )
                         sampling_rate = preprocess_config["preprocessing"]["audio"][
                             "sampling_rate"
@@ -202,13 +199,13 @@ def train(rank, args, configs, batch_size, num_gpus):
                             train_logger,
                             audio=wav_reconstruction,
                             sampling_rate=sampling_rate,
-                            tag="Training/step_{}_{}_reconstructed".format(step, tag),
+                            tag=f"Training/step_{step}_{tag}_reconstructed",
                         )
                         log(
                             train_logger,
                             audio=wav_prediction,
                             sampling_rate=sampling_rate,
-                            tag="Training/step_{}_{}_synthesized".format(step, tag),
+                            tag=f"Training/step_{step}_{tag}_synthesized",
                         )
 
                     if step % val_step == 0:
@@ -232,7 +229,7 @@ def train(rank, args, configs, batch_size, num_gpus):
                             },
                             os.path.join(
                                 train_config["path"]["ckpt_path"],
-                                "{}.pth.tar".format(step),
+                                f"{step}.pth.tar",
                             ),
                         )
 
