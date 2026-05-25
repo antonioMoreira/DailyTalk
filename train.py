@@ -116,9 +116,7 @@ def train(rank, args, configs, batch_size, num_gpus):
     train = True
     while train:
         if rank == 0:
-            inner_bar = tqdm(
-                total=len(loader), desc=f"Epoch {epoch}", position=1
-            )
+            inner_bar = tqdm(total=len(loader), desc=f"Epoch {epoch}", position=1)
         if num_gpus > 1:
             data_sampler.set_epoch(epoch)
         for batchs in loader:
@@ -172,14 +170,12 @@ def train(rank, args, configs, batch_size, num_gpus):
                         log(train_logger, step, losses=losses)
 
                     if step % synth_step == 0:
-                        fig, fig_attn, wav_reconstruction, wav_prediction, tag = (
-                            synth_one_sample(
-                                batch,
-                                output,
-                                vocoder,
-                                model_config,
-                                preprocess_config,
-                            )
+                        fig, fig_attn, wav_reconstruction, wav_prediction, tag = synth_one_sample(
+                            batch,
+                            output,
+                            vocoder,
+                            model_config,
+                            preprocess_config,
                         )
                         if fig_attn is not None:
                             log(
@@ -192,9 +188,7 @@ def train(rank, args, configs, batch_size, num_gpus):
                             img=fig,
                             tag=f"Training/step_{step}_{tag}",
                         )
-                        sampling_rate = preprocess_config["preprocessing"]["audio"][
-                            "sampling_rate"
-                        ]
+                        sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
                         log(
                             train_logger,
                             audio=wav_reconstruction,
@@ -279,9 +273,7 @@ if __name__ == "__main__":
     print(" ---> Type of Building Block:", model_config["block_type"])
     print(
         " ---> Type of Duration Modeling:",
-        "unsupervised"
-        if model_config["duration_modeling"]["learn_alignment"]
-        else "supervised",
+        "unsupervised" if model_config["duration_modeling"]["learn_alignment"] else "supervised",
     )
     print(
         "================================================================================================="
