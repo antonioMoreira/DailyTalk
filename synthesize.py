@@ -1,3 +1,21 @@
+# Monkey-patch six to support PEP 451 under Python 3.14+
+try:
+    import six
+    from importlib.machinery import ModuleSpec
+
+    # pyrefly: ignore [missing-attribute]
+    if not hasattr(six._SixMetaPathImporter, "find_spec"):
+
+        def find_spec(self, fullname, path, target=None):
+            if fullname in self.known_modules:
+                return ModuleSpec(fullname, self, is_package=self.is_package(fullname))
+            return None
+
+        # pyrefly: ignore [missing-attribute]
+        six._SixMetaPathImporter.find_spec = find_spec
+except Exception:
+    pass
+
 import re
 import os
 import json
@@ -70,7 +88,7 @@ def synthesize(device, model, args, configs, vocoder, batchs, control_values):
                 history_info=batch[-1],
                 p_control=pitch_control,
                 e_control=energy_control,
-                d_control=duration_control
+                d_control=duration_control,
             )
             synth_samples(
                 batch,
@@ -84,7 +102,6 @@ def synthesize(device, model, args, configs, vocoder, batchs, control_values):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--restore_step", type=int, required=True)
     parser.add_argument(
@@ -154,15 +171,17 @@ if __name__ == "__main__":
     preprocess_config, model_config, train_config = get_configs_of(args.dataset)
     configs = (preprocess_config, model_config, train_config)
     os.makedirs(
-        os.path.join(train_config["path"]["result_path"], str(args.restore_step)), exist_ok=True)
+        os.path.join(train_config["path"]["result_path"], str(args.restore_step)),
+        exist_ok=True,
+    )
 
     # Set Device
     torch.manual_seed(train_config["seed"])
     if torch.cuda.is_available():
         torch.cuda.manual_seed(train_config["seed"])
-        device = torch.device('cuda')
+        device = torch.device("cuda")
     else:
-        device = torch.device('cpu')
+        device = torch.device("cpu")
     print("Device of CompTransTTS:", device)
 
     # Get model
@@ -181,25 +200,47 @@ if __name__ == "__main__":
             collate_fn=dataset.collate_fn,
         )
     if args.mode == "single":
-        assert model_config["history_encoder"]["type"] == 'none', "Single inference is not supported for conversational TTS, currently"
+        assert model_config["history_encoder"]["type"] == "none", (
+            "Single inference is not supported for conversational TTS, currently"
+        )
         ids = raw_texts = [args.text[:100]]
 
         # Speaker Info
-        load_spker_embed = model_config["multi_speaker"] \
-            and preprocess_config["preprocessing"]["speaker_embedder"] != 'none'
-        with open(os.path.join(preprocess_config["path"]["preprocessed_path"], "speakers.json")) as f:
+        load_spker_embed = (
+            model_config["multi_speaker"]
+            and preprocess_config["preprocessing"]["speaker_embedder"] != "none"
+        )
+        with open(
+            os.path.join(
+                preprocess_config["path"]["preprocessed_path"], "speakers.json"
+            )
+        ) as f:
             speaker_map = json.load(f)
-        speakers = np.array([speaker_map[args.speaker_id]]) if model_config["multi_speaker"] else np.array([0]) # single speaker is allocated 0
-        spker_embed = np.load(os.path.join(
-            preprocess_config["path"]["preprocessed_path"],
-            "spker_embed",
-            "{}-spker_embed.npy".format(args.speaker_id),
-        )) if load_spker_embed else None
+        speakers = (
+            np.array([speaker_map[args.speaker_id]])
+            if model_config["multi_speaker"]
+            else np.array([0])
+        )  # single speaker is allocated 0
+        spker_embed = (
+            np.load(
+                os.path.join(
+                    preprocess_config["path"]["preprocessed_path"],
+                    "spker_embed",
+                    "{}-spker_embed.npy".format(args.speaker_id),
+                )
+            )
+            if load_spker_embed
+            else None
+        )
 
         # Emotion Info
         emotions = None
         if model_config["multi_emotion"]:
-            with open(os.path.join(preprocess_config["path"]["preprocessed_path"], "emotions.json")) as f:
+            with open(
+                os.path.join(
+                    preprocess_config["path"]["preprocessed_path"], "emotions.json"
+                )
+            ) as f:
                 emotion_map = json.load(f)
             emotions = np.array([emotion_map[args.emotion_id]])
 
@@ -208,7 +249,18 @@ if __name__ == "__main__":
         else:
             raise NotImplementedError
         text_lens = np.array([len(texts[0])])
-        batchs = [(ids, raw_texts, speakers, texts, text_lens, max(text_lens), spker_embed, emotions)]
+        batchs = [
+            (
+                ids,
+                raw_texts,
+                speakers,
+                texts,
+                text_lens,
+                max(text_lens),
+                spker_embed,
+                emotions,
+            )
+        ]
 
     control_values = args.pitch_control, args.energy_control, args.duration_control
 

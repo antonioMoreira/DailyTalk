@@ -1,140 +1,157 @@
-import logging
 import os
-
-import numpy as np
-import tensorflow.keras.backend as K
-from tensorflow.keras import layers
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import Input
-from tensorflow.keras.layers import Lambda, Dense
-from tensorflow.keras.layers import Reshape
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam
-
-from deepspeaker.constants import NUM_FBANKS, NUM_FRAMES
+import logging
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
+class IdentityBlock(nn.Module):
+    def __init__(self, filters, kernel_size=3):
+        super(IdentityBlock, self).__init__()
+        self.conv1 = nn.Conv2d(filters, filters, kernel_size=kernel_size, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(filters)
+        self.conv2 = nn.Conv2d(filters, filters, kernel_size=kernel_size, stride=1, padding=1)
+        self.bn2 = nn.BatchNorm2d(filters)
 
-class DeepSpeakerModel:
+    def forward(self, x):
+        residual = x
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = torch.clamp(out, 0.0, 20.0)
 
-    # I thought it was 3 but maybe energy is added at a 4th dimension.
-    # would be better to have 4 dimensions:
-    # MFCC, DIFF(MFCC), DIFF(DIFF(MFCC)), ENERGIES (probably tiled across the frequency domain).
-    # this seems to help match the parameter counts.
-    def __init__(self, batch_input_shape=(None, NUM_FRAMES, NUM_FBANKS, 1), include_softmax=False,
-                 num_speakers_softmax=None):
-        self.include_softmax = include_softmax
-        if self.include_softmax:
-            assert num_speakers_softmax > 0
-        self.clipped_relu_count = 0
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = torch.clamp(out, 0.0, 20.0)
 
-        # http://cs231n.github.io/convolutional-networks/
-        # conv weights
-        # #params = ks * ks * nb_filters * num_channels_input
+        out = out + residual
+        out = torch.clamp(out, 0.0, 20.0)
+        return out
 
-        # Conv128-s
-        # 5*5*128*128/2+128
-        # ks*ks*nb_filters*channels/strides+bias(=nb_filters)
 
-        # take 100 ms -> 4 frames.
-        # if signal is 3 seconds, then take 100ms per 100ms and average out this network.
-        # 8*8 = 64 features.
+class ConvAndResBlock(nn.Module):
+    def __init__(self, in_filters, out_filters):
+        super(ConvAndResBlock, self).__init__()
+        self.conv = nn.Conv2d(in_filters, out_filters, kernel_size=5, stride=2, padding=2)
+        self.bn = nn.BatchNorm2d(out_filters)
+        self.res_blocks = nn.Sequential(
+            IdentityBlock(out_filters),
+            IdentityBlock(out_filters),
+            IdentityBlock(out_filters)
+        )
 
-        # used to share all the layers across the inputs
+    def forward(self, x):
+        out = self.conv(x)
+        out = self.bn(out)
+        out = torch.clamp(out, 0.0, 20.0)
+        out = self.res_blocks(out)
+        return out
 
-        # num_frames = K.shape() - do it dynamically after.
-        inputs = Input(batch_shape=batch_input_shape, name='input')
-        x = self.cnn_component(inputs)
 
-        x = Reshape((-1, 2048))(x)
-        # Temporal average layer. axis=1 is time.
-        x = Lambda(lambda y: K.mean(y, axis=1), name='average')(x)
-        if include_softmax:
-            logger.info('Including a Dropout layer to reduce overfitting.')
-            # used for softmax because the dataset we pre-train on might be too small. easy to overfit.
-            x = Dropout(0.5)(x)
-        x = Dense(512, name='affine')(x)
-        if include_softmax:
-            # Those weights are just when we train on softmax.
-            x = Dense(num_speakers_softmax, activation='softmax')(x)
-        else:
-            # Does not contain any weights.
-            x = Lambda(lambda y: K.l2_normalize(y, axis=1), name='ln')(x)
-        self.m = Model(inputs, x, name='ResCNN')
+class DeepSpeakerModel(nn.Module):
+    def __init__(self):
+        super(DeepSpeakerModel, self).__init__()
+        self.block1 = ConvAndResBlock(1, 64)
+        self.block2 = ConvAndResBlock(64, 128)
+        self.block3 = ConvAndResBlock(128, 256)
+        self.block4 = ConvAndResBlock(256, 512)
+        self.affine = nn.Linear(2048, 512)
 
-    def keras_model(self):
-        return self.m
+    def forward(self, x):
+        # Input shape: (B, T, F, 1) or (B, T, F)
+        if x.ndim == 3:
+            x = x.unsqueeze(-1)
+        # Permute to PyTorch Conv2D format (B, Channels, Height, Width) -> (B, 1, T, F)
+        x = x.permute(0, 3, 1, 2)
+        
+        out = self.block1(x)
+        out = self.block2(out)
+        out = self.block3(out)
+        out = self.block4(out)
+        
+        # Permute back to (B, T_final, F_final, Channels)
+        out = out.permute(0, 2, 3, 1)
+        B, T_final, F_final, C = out.shape
+        out = out.reshape(B, T_final, F_final * C)  # (B, T_final, 2048)
+        
+        # Temporal Average over time dimension (dim=1)
+        out = torch.mean(out, dim=1)  # (B, 2048)
+        
+        out = self.affine(out)
+        
+        # L2 Normalize
+        out = F.normalize(out, p=2, dim=1)
+        return out
 
-    def get_weights(self):
-        w = self.m.get_weights()
-        if self.include_softmax:
-            w.pop()  # last 2 are the W_softmax and b_softmax.
-            w.pop()
-        return w
 
-    def clipped_relu(self, inputs):
-        relu = Lambda(lambda y: K.minimum(K.maximum(y, 0), 20), name=f'clipped_relu_{self.clipped_relu_count}')(inputs)
-        self.clipped_relu_count += 1
-        return relu
+def load_weights_from_h5(model, h5_path):
+    import h5py
+    import numpy as np
+    
+    logger.info(f"Loading weights from legacy Keras H5 file: {h5_path} into PyTorch model...")
+    with h5py.File(h5_path, 'r') as f:
+        def get_data(layer_name, weight_name):
+            for prefix in ['', 'model_weights/']:
+                path = f"{prefix}{layer_name}/{layer_name}/{weight_name}"
+                if path in f:
+                    return np.array(f[path])
+                path2 = f"{prefix}{layer_name}/{weight_name}"
+                if path2 in f:
+                    return np.array(f[path2])
+            raise KeyError(f"Weight {weight_name} for layer {layer_name} not found in h5 file.")
 
-    def identity_block(self, input_tensor, kernel_size, filters, stage, block):
-        conv_name_base = f'res{stage}_{block}_branch'
-
-        x = Conv2D(filters,
-                   kernel_size=kernel_size,
-                   strides=1,
-                   activation=None,
-                   padding='same',
-                   kernel_initializer='glorot_uniform',
-                   kernel_regularizer=regularizers.l2(l=0.0001),
-                   name=conv_name_base + '_2a')(input_tensor)
-        x = BatchNormalization(name=conv_name_base + '_2a_bn')(x)
-        x = self.clipped_relu(x)
-
-        x = Conv2D(filters,
-                   kernel_size=kernel_size,
-                   strides=1,
-                   activation=None,
-                   padding='same',
-                   kernel_initializer='glorot_uniform',
-                   kernel_regularizer=regularizers.l2(l=0.0001),
-                   name=conv_name_base + '_2b')(x)
-        x = BatchNormalization(name=conv_name_base + '_2b_bn')(x)
-
-        x = self.clipped_relu(x)
-
-        x = layers.add([x, input_tensor])
-        x = self.clipped_relu(x)
-        return x
-
-    def conv_and_res_block(self, inp, filters, stage):
-        conv_name = 'conv{}-s'.format(filters)
-        # TODO: why kernel_regularizer?
-        o = Conv2D(filters,
-                   kernel_size=5,
-                   strides=2,
-                   activation=None,
-                   padding='same',
-                   kernel_initializer='glorot_uniform',
-                   kernel_regularizer=regularizers.l2(l=0.0001), name=conv_name)(inp)
-        o = BatchNormalization(name=conv_name + '_bn')(o)
-        o = self.clipped_relu(o)
-        for i in range(3):
-            o = self.identity_block(o, kernel_size=3, filters=filters, stage=stage, block=i)
-        return o
-
-    def cnn_component(self, inp):
-        x = self.conv_and_res_block(inp, 64, stage=1)
-        x = self.conv_and_res_block(x, 128, stage=2)
-        x = self.conv_and_res_block(x, 256, stage=3)
-        x = self.conv_and_res_block(x, 512, stage=4)
-        return x
-
-    def set_weights(self, w):
-        for layer, layer_w in zip(self.m.layers, w):
-            layer.set_weights(layer_w)
-            logger.info(f'Setting weights for [{layer.name}]...')
+        blocks = [model.block1, model.block2, model.block3, model.block4]
+        filters_list = [64, 128, 256, 512]
+        
+        for stage_idx, (block, filters) in enumerate(zip(blocks, filters_list), start=1):
+            conv_name = f"conv{filters}-s"
+            bn_name = f"{conv_name}_bn"
+            
+            # Conv weight mapping (transpose TF kernel shape (H, W, in, out) to PT shape (out, in, H, W))
+            w_conv = get_data(conv_name, 'kernel:0')
+            b_conv = get_data(conv_name, 'bias:0')
+            block.conv.weight.data = torch.from_numpy(w_conv.transpose(3, 2, 0, 1)).float()
+            block.conv.bias.data = torch.from_numpy(b_conv).float()
+            
+            # BN weight mapping
+            block.bn.weight.data = torch.from_numpy(get_data(bn_name, 'gamma:0')).float()
+            block.bn.bias.data = torch.from_numpy(get_data(bn_name, 'beta:0')).float()
+            block.bn.running_mean.data = torch.from_numpy(get_data(bn_name, 'moving_mean:0')).float()
+            block.bn.running_var.data = torch.from_numpy(get_data(bn_name, 'moving_variance:0')).float()
+            
+            # Identity blocks
+            for i, res_block in enumerate(block.res_blocks):
+                branch_name = f"res{stage_idx}_{i}_branch"
+                conv_2a = f"{branch_name}_2a"
+                bn_2a = f"{conv_2a}_bn"
+                conv_2b = f"{branch_name}_2b"
+                bn_2b = f"{conv_2b}_bn"
+                
+                # conv1
+                w_c1 = get_data(conv_2a, 'kernel:0')
+                b_c1 = get_data(conv_2a, 'bias:0')
+                res_block.conv1.weight.data = torch.from_numpy(w_c1.transpose(3, 2, 0, 1)).float()
+                res_block.conv1.bias.data = torch.from_numpy(b_c1).float()
+                # bn1
+                res_block.bn1.weight.data = torch.from_numpy(get_data(bn_2a, 'gamma:0')).float()
+                res_block.bn1.bias.data = torch.from_numpy(get_data(bn_2a, 'beta:0')).float()
+                res_block.bn1.running_mean.data = torch.from_numpy(get_data(bn_2a, 'moving_mean:0')).float()
+                res_block.bn1.running_var.data = torch.from_numpy(get_data(bn_2a, 'moving_variance:0')).float()
+                
+                # conv2
+                w_c2 = get_data(conv_2b, 'kernel:0')
+                b_c2 = get_data(conv_2b, 'bias:0')
+                res_block.conv2.weight.data = torch.from_numpy(w_c2.transpose(3, 2, 0, 1)).float()
+                res_block.conv2.bias.data = torch.from_numpy(b_c2).float()
+                # bn2
+                res_block.bn2.weight.data = torch.from_numpy(get_data(bn_2b, 'gamma:0')).float()
+                res_block.bn2.bias.data = torch.from_numpy(get_data(bn_2b, 'beta:0')).float()
+                res_block.bn2.running_mean.data = torch.from_numpy(get_data(bn_2b, 'moving_mean:0')).float()
+                res_block.bn2.running_var.data = torch.from_numpy(get_data(bn_2b, 'moving_variance:0')).float()
+                
+        # Affine Layer (transpose Dense shape (in, out) to PT shape (out, in))
+        w_affine = get_data('affine', 'kernel:0')
+        b_affine = get_data('affine', 'bias:0')
+        model.affine.weight.data = torch.from_numpy(w_affine.transpose(1, 0)).float()
+        model.affine.bias.data = torch.from_numpy(b_affine).float()
+        logger.info("Successfully loaded all legacy Keras weights into PyTorch model.")

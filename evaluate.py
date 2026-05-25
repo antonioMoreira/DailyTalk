@@ -1,3 +1,21 @@
+# Monkey-patch six to support PEP 451 under Python 3.14+
+try:
+    import six
+    from importlib.machinery import ModuleSpec
+
+    # pyrefly: ignore [missing-attribute]
+    if not hasattr(six._SixMetaPathImporter, "find_spec"):
+
+        def find_spec(self, fullname, path, target=None):
+            if fullname in self.known_modules:
+                return ModuleSpec(fullname, self, is_package=self.is_package(fullname))
+            return None
+
+        # pyrefly: ignore [missing-attribute]
+        six._SixMetaPathImporter.find_spec = find_spec
+except Exception:
+    pass
+
 import argparse
 import os
 
@@ -18,7 +36,12 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=Non
     # Get dataset
     level_tag, *_ = get_variance_level(preprocess_config, model_config)
     dataset = Dataset(
-        "val_{}.txt".format(level_tag), preprocess_config, model_config, train_config, sort=False, drop_last=False
+        "val_{}.txt".format(level_tag),
+        preprocess_config,
+        model_config,
+        train_config,
+        sort=False,
+        drop_last=False,
     )
     batch_size = train_config["optimizer"]["batch_size"]
     loader = DataLoader(
@@ -32,14 +55,19 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=Non
     Loss = CompTransTTSLoss(preprocess_config, model_config, train_config).to(device)
 
     # Evaluation
-    loss_sums = [{k:0 for k in loss.keys()} if isinstance(loss, dict) else 0 for loss in losses]
+    loss_sums = [
+        {k: 0 for k in loss.keys()} if isinstance(loss, dict) else 0 for loss in losses
+    ]
     for batchs in loader:
         for batch in batchs:
             batch = to_device(batch, device)
             with torch.no_grad():
                 # Forward
                 output = model(*(batch[2:]), step=step)
-                batch[9:11], output = output[-2:], output[:-2] # Update pitch and energy level
+                batch[9:11], output = (
+                    output[-2:],
+                    output[:-2],
+                )  # Update pitch and energy level
 
                 # Cal Loss
                 losses = Loss(batch, output, step=step)
@@ -55,7 +83,7 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=Non
     loss_means_ = []
     for loss_sum in loss_sums:
         if isinstance(loss_sum, dict):
-            loss_mean = {k:v / len(dataset) for k, v in loss_sum.items()}
+            loss_mean = {k: v / len(dataset) for k, v in loss_sum.items()}
             loss_means.append(loss_mean)
             loss_means_.append(sum(loss_mean.values()))
         else:

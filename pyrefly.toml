@@ -1,0 +1,25 @@
+# Pyrefly Static Type Checker Configuration File
+# Documentation: https://pyrefly.org
+
+# Paths to include in type-checking
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+
+# Paths to exclude from type-checking
+project-excludes = [
+    "**/__pycache__",
+    "**/.venv",
+    "**/.git",
+    "**/preprocessed_data",
+]
+
+# Environment Configuration
+python-version = "3.14"
+python-platform = "linux"
+
+# Integration and Ignore Settings
+use-ignore-files = true
+permissive-ignores = true
+check-unannotated-defs = true

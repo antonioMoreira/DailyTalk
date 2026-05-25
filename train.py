@@ -1,3 +1,21 @@
+# Monkey-patch six to support PEP 451 under Python 3.14+
+try:
+    import six
+    from importlib.machinery import ModuleSpec
+
+    # pyrefly: ignore [missing-attribute]
+    if not hasattr(six._SixMetaPathImporter, "find_spec"):
+
+        def find_spec(self, fullname, path, target=None):
+            if fullname in self.known_modules:
+                return ModuleSpec(fullname, self, is_package=self.is_package(fullname))
+            return None
+
+        # pyrefly: ignore [missing-attribute]
+        six._SixMetaPathImporter.find_spec = find_spec
+except Exception:
+    pass
+
 import argparse
 import os
 
@@ -14,7 +32,13 @@ from torch.cuda import amp
 from tqdm import tqdm
 
 from utils.model import get_model, get_vocoder, get_param_num
-from utils.tools import get_configs_of, get_variance_level, to_device, log, synth_one_sample
+from utils.tools import (
+    get_configs_of,
+    get_variance_level,
+    to_device,
+    log,
+    synth_one_sample,
+)
 from model import CompTransTTSLoss
 from dataset import Dataset
 
@@ -27,17 +51,22 @@ def train(rank, args, configs, batch_size, num_gpus):
     preprocess_config, model_config, train_config = configs
     if num_gpus > 1:
         init_process_group(
-            backend=train_config["dist_config"]['dist_backend'],
-            init_method=train_config["dist_config"]['dist_url'],
-            world_size=train_config["dist_config"]['world_size'] * num_gpus,
+            backend=train_config["dist_config"]["dist_backend"],
+            init_method=train_config["dist_config"]["dist_url"],
+            world_size=train_config["dist_config"]["world_size"] * num_gpus,
             rank=rank,
         )
-    device = torch.device('cuda:{:d}'.format(rank))
+    device = torch.device("cuda:{:d}".format(rank))
 
     # Get dataset
     level_tag, *_ = get_variance_level(preprocess_config, model_config)
     dataset = Dataset(
-        "train_{}.txt".format(level_tag), preprocess_config, model_config, train_config, sort=True, drop_last=True
+        "train_{}.txt".format(level_tag),
+        preprocess_config,
+        model_config,
+        train_config,
+        sort=True,
+        drop_last=True,
     )
     data_sampler = DistributedSampler(dataset) if num_gpus > 1 else None
     group_size = 4  # Set this larger than 1 to enable sorting in Dataset
@@ -54,7 +83,7 @@ def train(rank, args, configs, batch_size, num_gpus):
     model, optimizer = get_model(args, configs, device, train=True)
     if num_gpus > 1:
         model = DistributedDataParallel(model, device_ids=[rank]).to(device)
-    scaler = amp.GradScaler(enabled=args.use_amp)
+    scaler = torch.amp.GradScaler("cuda", enabled=args.use_amp)
     Loss = CompTransTTSLoss(preprocess_config, model_config, train_config).to(device)
 
     # Load vocoder
@@ -90,7 +119,9 @@ def train(rank, args, configs, batch_size, num_gpus):
     train = True
     while train:
         if rank == 0:
-            inner_bar = tqdm(total=len(loader), desc="Epoch {}".format(epoch), position=1)
+            inner_bar = tqdm(
+                total=len(loader), desc="Epoch {}".format(epoch), position=1
+            )
         if num_gpus > 1:
             data_sampler.set_epoch(epoch)
         for batchs in loader:
@@ -102,7 +133,10 @@ def train(rank, args, configs, batch_size, num_gpus):
                 with amp.autocast(args.use_amp):
                     # Forward
                     output = model(*(batch[2:]), step=step)
-                    batch[9:11], output = output[-2:], output[:-2] # Update pitch and energy level
+                    batch[9:11], output = (
+                        output[-2:],
+                        output[:-2],
+                    )  # Update pitch and energy level
 
                     # Cal Loss
                     losses = Loss(batch, output, step=step)
@@ -124,7 +158,10 @@ def train(rank, args, configs, batch_size, num_gpus):
 
                 if rank == 0:
                     if step % log_step == 0:
-                        losses_ = [sum(l.values()).item() if isinstance(l, dict) else l.item() for l in losses]
+                        losses_ = [
+                            sum(l.values()).item() if isinstance(l, dict) else l.item()
+                            for l in losses
+                        ]
                         message1 = "Step {}/{}, ".format(step, total_step)
                         message2 = "Total Loss: {:.4f}, Mel Loss: {:.4f}, Mel PostNet Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}, CTC Loss: {:.4f}, Binarization Loss: {:.4f}".format(
                             *losses_
@@ -138,12 +175,14 @@ def train(rank, args, configs, batch_size, num_gpus):
                         log(train_logger, step, losses=losses)
 
                     if step % synth_step == 0:
-                        fig, fig_attn, wav_reconstruction, wav_prediction, tag = synth_one_sample(
-                            batch,
-                            output,
-                            vocoder,
-                            model_config,
-                            preprocess_config,
+                        fig, fig_attn, wav_reconstruction, wav_prediction, tag = (
+                            synth_one_sample(
+                                batch,
+                                output,
+                                vocoder,
+                                model_config,
+                                preprocess_config,
+                            )
                         )
                         if fig_attn is not None:
                             log(
@@ -174,7 +213,9 @@ def train(rank, args, configs, batch_size, num_gpus):
 
                     if step % val_step == 0:
                         model.eval()
-                        message = evaluate(device, model, step, configs, val_logger, vocoder, losses)
+                        message = evaluate(
+                            device, model, step, configs, val_logger, vocoder, losses
+                        )
                         with open(os.path.join(val_log_path, "log.txt"), "a") as f:
                             f.write(message + "\n")
                         outer_bar.write(message)
@@ -184,7 +225,9 @@ def train(rank, args, configs, batch_size, num_gpus):
                     if step % save_step == 0:
                         torch.save(
                             {
-                                "model": model.module.state_dict() if num_gpus > 1 else model.state_dict(),
+                                "model": model.module.state_dict()
+                                if num_gpus > 1
+                                else model.state_dict(),
                                 "optimizer": optimizer._optimizer.state_dict(),
                             },
                             os.path.join(
@@ -204,10 +247,11 @@ def train(rank, args, configs, batch_size, num_gpus):
                 inner_bar.update(1)
         epoch += 1
 
+
 if __name__ == "__main__":
     assert torch.cuda.is_available(), "CPU training is not allowed."
     parser = argparse.ArgumentParser()
-    parser.add_argument('--use_amp', action='store_true')
+    parser.add_argument("--use_amp", action="store_true")
     parser.add_argument("--restore_step", type=int, default=0)
     parser.add_argument(
         "--dataset",
@@ -228,14 +272,23 @@ if __name__ == "__main__":
     batch_size = int(train_config["optimizer"]["batch_size"] / num_gpus)
 
     # Log Configuration
-    print("\n==================================== Training Configuration ====================================")
-    print(' ---> Automatic Mixed Precision:', args.use_amp)
-    print(' ---> Number of used GPU:', num_gpus)
-    print(' ---> Batch size per GPU:', batch_size)
-    print(' ---> Batch size in total:', batch_size * num_gpus)
+    print(
+        "\n==================================== Training Configuration ===================================="
+    )
+    print(" ---> Automatic Mixed Precision:", args.use_amp)
+    print(" ---> Number of used GPU:", num_gpus)
+    print(" ---> Batch size per GPU:", batch_size)
+    print(" ---> Batch size in total:", batch_size * num_gpus)
     print(" ---> Type of Building Block:", model_config["block_type"])
-    print(" ---> Type of Duration Modeling:", "unsupervised" if model_config["duration_modeling"]["learn_alignment"] else "supervised")
-    print("=================================================================================================")
+    print(
+        " ---> Type of Duration Modeling:",
+        "unsupervised"
+        if model_config["duration_modeling"]["learn_alignment"]
+        else "supervised",
+    )
+    print(
+        "================================================================================================="
+    )
     print("Prepare training ...")
 
     if num_gpus > 1:

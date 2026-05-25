@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from scipy.signal import get_window
-from librosa.util import pad_center, tiny
+from librosa.util import pad_center
 from librosa.filters import mel as librosa_mel_fn
 
 from audio.audio_processing import (
@@ -64,19 +64,21 @@ class STFT(torch.nn.Module):
         )
         input_data = input_data.squeeze(1)
 
+        device = input_data.device
+        # pyrefly: ignore [no-matching-overload]
         forward_transform = F.conv1d(
-            input_data.cuda(),
-            torch.autograd.Variable(self.forward_basis, requires_grad=False).cuda(),
+            input_data,
+            self.forward_basis.to(device),
             stride=self.hop_length,
             padding=0,
-        ).cpu()
+        )
 
         cutoff = int((self.filter_length / 2) + 1)
         real_part = forward_transform[:, :cutoff, :]
         imag_part = forward_transform[:, cutoff:, :]
 
-        magnitude = torch.sqrt(real_part ** 2 + imag_part ** 2)
-        phase = torch.autograd.Variable(torch.atan2(imag_part.data, real_part.data))
+        magnitude = torch.sqrt(real_part**2 + imag_part**2)
+        phase = torch.atan2(imag_part, real_part)
 
         return magnitude, phase
 
@@ -85,6 +87,7 @@ class STFT(torch.nn.Module):
             [magnitude * torch.cos(phase), magnitude * torch.sin(phase)], dim=1
         )
 
+        device = recombine_magnitude_phase.device
         inverse_transform = F.conv_transpose1d(
             recombine_magnitude_phase,
             torch.autograd.Variable(self.inverse_basis, requires_grad=False),
@@ -102,13 +105,11 @@ class STFT(torch.nn.Module):
                 dtype=np.float32,
             )
             # remove modulation effects
+            tiny_val = np.finfo(window_sum.dtype).tiny
             approx_nonzero_indices = torch.from_numpy(
-                np.where(window_sum > tiny(window_sum))[0]
-            )
-            window_sum = torch.autograd.Variable(
-                torch.from_numpy(window_sum), requires_grad=False
-            )
-            window_sum = window_sum.cuda() if magnitude.is_cuda else window_sum
+                np.where(window_sum > tiny_val)[0]
+            ).to(device)
+            window_sum = torch.from_numpy(window_sum).to(device)
             inverse_transform[:, :, approx_nonzero_indices] /= window_sum[
                 approx_nonzero_indices
             ]
@@ -143,7 +144,11 @@ class TacotronSTFT(torch.nn.Module):
         self.sampling_rate = sampling_rate
         self.stft_fn = STFT(filter_length, hop_length, win_length)
         mel_basis = librosa_mel_fn(
-            sampling_rate, filter_length, n_mel_channels, mel_fmin, mel_fmax
+            sr=sampling_rate,
+            n_fft=filter_length,
+            n_mels=n_mel_channels,
+            fmin=mel_fmin,
+            fmax=mel_fmax,
         )
         mel_basis = torch.from_numpy(mel_basis).float()
         self.register_buffer("mel_basis", mel_basis)

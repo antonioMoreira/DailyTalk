@@ -1,3 +1,21 @@
+# Monkey-patch six to support PEP 451 under Python 3.14+
+try:
+    import six
+    from importlib.machinery import ModuleSpec
+
+    # pyrefly: ignore [missing-attribute]
+    if not hasattr(six._SixMetaPathImporter, "find_spec"):
+
+        def find_spec(self, fullname, path, target=None):
+            if fullname in self.known_modules:
+                return ModuleSpec(fullname, self, is_package=self.is_package(fullname))
+            return None
+
+        # pyrefly: ignore [missing-attribute]
+        six._SixMetaPathImporter.find_spec = find_spec
+except Exception:
+    pass
+
 import os
 import json
 import yaml
@@ -7,6 +25,7 @@ import torch.nn.functional as F
 from torch.cuda import amp
 import numpy as np
 import matplotlib
+
 matplotlib.use("Agg")
 from scipy.io import wavfile
 from scipy.interpolate import interp1d
@@ -16,12 +35,15 @@ from sklearn.manifold import TSNE
 
 def get_configs_of(dataset):
     config_dir = os.path.join("./config", dataset)
-    preprocess_config = yaml.load(open(
-        os.path.join(config_dir, "preprocess.yaml"), "r"), Loader=yaml.FullLoader)
-    model_config = yaml.load(open(
-        os.path.join(config_dir, "model.yaml"), "r"), Loader=yaml.FullLoader)
-    train_config = yaml.load(open(
-        os.path.join(config_dir, "train.yaml"), "r"), Loader=yaml.FullLoader)
+    preprocess_config = yaml.load(
+        open(os.path.join(config_dir, "preprocess.yaml"), "r"), Loader=yaml.FullLoader
+    )
+    model_config = yaml.load(
+        open(os.path.join(config_dir, "model.yaml"), "r"), Loader=yaml.FullLoader
+    )
+    train_config = yaml.load(
+        open(os.path.join(config_dir, "train.yaml"), "r"), Loader=yaml.FullLoader
+    )
     return preprocess_config, model_config, train_config
 
 
@@ -30,18 +52,28 @@ def get_variance_level(preprocess_config, model_config, data_loading=True):
     Consider the fact that there is no pre-extracted phoneme-level variance features in unsupervised duration modeling.
     Outputs:
         pitch_level_tag, energy_level_tag: ["frame", "phone"]
-            If data_loading is set True, then it will only be the "frame" for unsupervised duration modeling. 
+            If data_loading is set True, then it will only be the "frame" for unsupervised duration modeling.
             Otherwise, it will be aligned with the feature_level in config.
         pitch_feature_level, energy_feature_level: ["frame_level", "phoneme_level"]
             The feature_level in config where the model will learn each variance in this level regardless of the input level.
     """
-    learn_alignment = model_config["duration_modeling"]["learn_alignment"] if data_loading else False
+    learn_alignment = (
+        model_config["duration_modeling"]["learn_alignment"] if data_loading else False
+    )
     pitch_feature_level = preprocess_config["preprocessing"]["pitch"]["feature"]
     energy_feature_level = preprocess_config["preprocessing"]["energy"]["feature"]
     assert pitch_feature_level in ["frame_level", "phoneme_level"]
     assert energy_feature_level in ["frame_level", "phoneme_level"]
-    pitch_level_tag = "phone" if (not learn_alignment and pitch_feature_level == "phoneme_level") else "frame"
-    energy_level_tag = "phone" if (not learn_alignment and energy_feature_level == "phoneme_level") else "frame"
+    pitch_level_tag = (
+        "phone"
+        if (not learn_alignment and pitch_feature_level == "phoneme_level")
+        else "frame"
+    )
+    energy_level_tag = (
+        "phone"
+        if (not learn_alignment and energy_feature_level == "phoneme_level")
+        else "frame"
+    )
     return pitch_level_tag, energy_level_tag, pitch_feature_level, energy_feature_level
 
 
@@ -118,7 +150,7 @@ def to_device(data, device):
         if emotions is not None:
             emotions = torch.from_numpy(emotions).long().to(device)
         if history_info is not None:
-            if len(history_info) == 4: # "Guo"
+            if len(history_info) == 4:  # "Guo"
                 (
                     text_embs,
                     history_lens,
@@ -128,7 +160,9 @@ def to_device(data, device):
 
                 text_embs = torch.from_numpy(text_embs).float().to(device)
                 history_lens = torch.from_numpy(history_lens).to(device)
-                history_text_embs = torch.from_numpy(history_text_embs).float().to(device)
+                history_text_embs = (
+                    torch.from_numpy(history_text_embs).float().to(device)
+                )
                 history_speakers = torch.from_numpy(history_speakers).long().to(device)
 
                 history_info = (
@@ -158,7 +192,17 @@ def to_device(data, device):
         ]
 
     if len(data) == 9:
-        (ids, raw_texts, speakers, texts, src_lens, max_src_len, spker_embeds, emotions, history_info) = data
+        (
+            ids,
+            raw_texts,
+            speakers,
+            texts,
+            src_lens,
+            max_src_len,
+            spker_embeds,
+            emotions,
+            history_info,
+        ) = data
 
         speakers = torch.from_numpy(speakers).long().to(device)
         texts = torch.from_numpy(texts).long().to(device)
@@ -168,7 +212,7 @@ def to_device(data, device):
         if emotions is not None:
             emotions = torch.from_numpy(emotions).long().to(device)
         if history_info is not None:
-            if len(history_info) == 4: # "Guo"
+            if len(history_info) == 4:  # "Guo"
                 (
                     text_embs,
                     history_lens,
@@ -178,7 +222,9 @@ def to_device(data, device):
 
                 text_embs = torch.from_numpy(text_embs).float().to(device)
                 history_lens = torch.from_numpy(history_lens).to(device)
-                history_text_embs = torch.from_numpy(history_text_embs).float().to(device)
+                history_text_embs = (
+                    torch.from_numpy(history_text_embs).float().to(device)
+                )
                 history_speakers = torch.from_numpy(history_speakers).long().to(device)
 
                 history_info = (
@@ -188,11 +234,28 @@ def to_device(data, device):
                     history_speakers,
                 )
 
-        return (ids, raw_texts, speakers, texts, src_lens, max_src_len, spker_embeds, emotions, history_info)
+        return (
+            ids,
+            raw_texts,
+            speakers,
+            texts,
+            src_lens,
+            max_src_len,
+            spker_embeds,
+            emotions,
+            history_info,
+        )
 
 
 def log(
-    logger, step=None, losses=None, fig=None, img=None, audio=None, sampling_rate=22050, tag=""
+    logger,
+    step=None,
+    losses=None,
+    fig=None,
+    img=None,
+    audio=None,
+    sampling_rate=22050,
+    tag="",
 ):
     if losses is not None:
         logger.add_scalar("Loss/total_loss", losses[0], step)
@@ -209,7 +272,7 @@ def log(
         logger.add_figure(tag, fig)
 
     if img is not None:
-        logger.add_image(tag, img, dataformats='HWC')
+        logger.add_image(tag, img, dataformats="HWC")
 
     if audio is not None:
         logger.add_audio(
@@ -224,7 +287,9 @@ def get_mask_from_lengths(lengths, max_len=None):
     if max_len is None:
         max_len = torch.max(lengths).item()
 
-    ids = torch.arange(0, max_len).unsqueeze(0).expand(batch_size, -1).to(lengths.device)
+    ids = (
+        torch.arange(0, max_len).unsqueeze(0).expand(batch_size, -1).to(lengths.device)
+    )
     mask = ids >= lengths.unsqueeze(1).expand(-1, max_len)
 
     return mask
@@ -240,7 +305,9 @@ def expand(values, durations):
 def synth_one_sample(targets, predictions, vocoder, model_config, preprocess_config):
 
     learn_alignment = model_config["duration_modeling"]["learn_alignment"]
-    pitch_level_tag, energy_level_tag, *_ = get_variance_level(preprocess_config, model_config)
+    pitch_level_tag, energy_level_tag, *_ = get_variance_level(
+        preprocess_config, model_config
+    )
     basename = targets[0][0]
     src_len = predictions[8][0].item()
     mel_len = predictions[9][0].item()
@@ -250,17 +317,26 @@ def synth_one_sample(targets, predictions, vocoder, model_config, preprocess_con
 
     fig_attn = None
     if learn_alignment:
-        attn_prior, attn_soft, attn_hard, attn_hard_dur, attn_logprob = targets[12], *predictions[10]
-        attn_prior = attn_prior[0, :src_len, :mel_len].squeeze().detach().cpu().numpy() # text_len x mel_len
-        attn_soft = attn_soft[0, 0, :mel_len, :src_len].detach().cpu().transpose(0, 1).numpy() # text_len x mel_len
-        attn_hard = attn_hard[0, 0, :mel_len, :src_len].detach().cpu().transpose(0, 1).numpy() # text_len x mel_len
+        attn_prior, attn_soft, attn_hard, attn_hard_dur, attn_logprob = (
+            targets[12],
+            *predictions[10],
+        )
+        attn_prior = (
+            attn_prior[0, :src_len, :mel_len].squeeze().detach().cpu().numpy()
+        )  # text_len x mel_len
+        attn_soft = (
+            attn_soft[0, 0, :mel_len, :src_len].detach().cpu().transpose(0, 1).numpy()
+        )  # text_len x mel_len
+        attn_hard = (
+            attn_hard[0, 0, :mel_len, :src_len].detach().cpu().transpose(0, 1).numpy()
+        )  # text_len x mel_len
         fig_attn = plot_alignment(
             [
                 attn_soft,
                 attn_hard,
                 attn_prior,
             ],
-            ["Soft Attention", "Hard Attention", "Prior"]
+            ["Soft Attention", "Hard Attention", "Prior"],
         )
 
     if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":
@@ -278,7 +354,9 @@ def synth_one_sample(targets, predictions, vocoder, model_config, preprocess_con
         os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json")
     ) as f:
         stats = json.load(f)
-        stats = stats[f"pitch_{pitch_level_tag}"] + stats[f"energy_{energy_level_tag}"][:2] # Should follow the level at data loading time.
+        stats = (
+            stats[f"pitch_{pitch_level_tag}"] + stats[f"energy_{energy_level_tag}"][:2]
+        )  # Should follow the level at data loading time.
 
     fig = plot_mel(
         [
@@ -310,14 +388,18 @@ def synth_one_sample(targets, predictions, vocoder, model_config, preprocess_con
     return fig, fig_attn, wav_reconstruction, wav_prediction, basename
 
 
-def synth_samples(targets, predictions, vocoder, model_config, preprocess_config, path, args):
+def synth_samples(
+    targets, predictions, vocoder, model_config, preprocess_config, path, args
+):
 
     multi_speaker = model_config["multi_speaker"]
     multi_emotion = model_config["multi_emotion"]
     history_type = model_config["history_encoder"]["type"]
     emotion_tag = ("_" + args.emotion_id) if multi_emotion else ""
     learn_alignment = model_config["duration_modeling"]["learn_alignment"]
-    pitch_level_tag, energy_level_tag, *_ = get_variance_level(preprocess_config, model_config)
+    pitch_level_tag, energy_level_tag, *_ = get_variance_level(
+        preprocess_config, model_config
+    )
     basenames = targets[0]
     for i in range(len(predictions[0])):
         basename = basenames[i]
@@ -342,17 +424,34 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
             os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json")
         ) as f:
             stats = json.load(f)
-            stats = stats[f"pitch_{pitch_level_tag}"] + stats[f"energy_{energy_level_tag}"][:2] # Should follow the level at data loading time.
+            stats = (
+                stats[f"pitch_{pitch_level_tag}"]
+                + stats[f"energy_{energy_level_tag}"][:2]
+            )  # Should follow the level at data loading time.
 
-        if history_type == 'none':
+        if history_type == "none":
             fig_save_dir = os.path.join(
-                path, str(args.restore_step), "{}_{}{}.png".format(basename, args.speaker_id, emotion_tag)\
-                    if multi_speaker and args.mode == "single" else "{}.png".format(basename))
+                path,
+                str(args.restore_step),
+                "{}_{}{}.png".format(basename, args.speaker_id, emotion_tag)
+                if multi_speaker and args.mode == "single"
+                else "{}.png".format(basename),
+            )
         else:
-            os.makedirs((os.path.join(
-                path, str(args.restore_step), basename.split("_")[-1].strip("d"))), exist_ok=True)
+            os.makedirs(
+                (
+                    os.path.join(
+                        path, str(args.restore_step), basename.split("_")[-1].strip("d")
+                    )
+                ),
+                exist_ok=True,
+            )
             fig_save_dir = os.path.join(
-                path, str(args.restore_step), basename.split("_")[-1].strip("d"), "{}.png".format(basename))
+                path,
+                str(args.restore_step),
+                basename.split("_")[-1].strip("d"),
+                "{}.png".format(basename),
+            )
         fig = plot_mel(
             [
                 (mel_prediction.cpu().numpy(), pitch, energy),
@@ -372,16 +471,30 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
 
     sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
     for wav, basename in zip(wav_predictions, basenames):
-        if history_type == 'none':
+        if history_type == "none":
             wav_save_dir = os.path.join(
-                path, str(args.restore_step), "{}_{}{}.wav".format(basename, args.speaker_id, emotion_tag)\
-                    if multi_speaker and args.mode == "single" else "{}.wav".format(basename))
+                path,
+                str(args.restore_step),
+                "{}_{}{}.wav".format(basename, args.speaker_id, emotion_tag)
+                if multi_speaker and args.mode == "single"
+                else "{}.wav".format(basename),
+            )
         else:
-            os.makedirs((os.path.join(
-                path, str(args.restore_step), basename.split("_")[-1].strip("d"))), exist_ok=True)
+            os.makedirs(
+                (
+                    os.path.join(
+                        path, str(args.restore_step), basename.split("_")[-1].strip("d")
+                    )
+                ),
+                exist_ok=True,
+            )
             wav_save_dir = os.path.join(
-                path, str(args.restore_step), basename.split("_")[-1].strip("d"), "{}.wav".format(basename))
-        wavfile.write(wav_save_dir,sampling_rate, wav)
+                path,
+                str(args.restore_step),
+                basename.split("_")[-1].strip("d"),
+                "{}.wav".format(basename),
+            )
+        wavfile.write(wav_save_dir, sampling_rate, wav)
 
 
 def plot_mel(data, stats, titles, save_dir=None):
@@ -408,7 +521,7 @@ def plot_mel(data, stats, titles, save_dir=None):
         axes[i][0].set_anchor("W")
 
         ax1 = add_axis(fig, axes[i][0])
-        ax1.plot(pitch, color="tomato", linewidth=.7)
+        ax1.plot(pitch, color="tomato", linewidth=0.7)
         ax1.set_xlim(0, mel.shape[1])
         ax1.set_ylim(0, pitch_max)
         ax1.set_ylabel("F0", color="tomato")
@@ -417,7 +530,7 @@ def plot_mel(data, stats, titles, save_dir=None):
         )
 
         ax2 = add_axis(fig, axes[i][0])
-        ax2.plot(energy, color="darkviolet", linewidth=.7)
+        ax2.plot(energy, color="darkviolet", linewidth=0.7)
         ax2.set_xlim(0, mel.shape[1])
         ax2.set_ylim(energy_min, energy_max)
         ax2.set_ylabel("Energy", color="darkviolet")
@@ -461,21 +574,21 @@ def plot_mel(data, stats, titles, save_dir=None):
 
 
 def plot_alignment(data, titles=None, save_dir=None):
-    fig, axes = plt.subplots(len(data), 1, figsize=[6,4],dpi=300)
-    plt.subplots_adjust(top = 0.9, bottom = 0.1, right = 0.95, left = 0.05)
+    fig, axes = plt.subplots(len(data), 1, figsize=[6, 4], dpi=300)
+    plt.subplots_adjust(top=0.9, bottom=0.1, right=0.95, left=0.05)
     if titles is None:
         titles = [None for i in range(len(data))]
 
     for i in range(len(data)):
         im = data[i]
-        axes[i].imshow(im, origin='lower')
-        axes[i].set_xlabel('Audio timestep')
-        axes[i].set_ylabel('Text timestep')
+        axes[i].imshow(im, origin="lower")
+        axes[i].set_xlabel("Audio timestep")
+        axes[i].set_ylabel("Text timestep")
         axes[i].set_ylim(0, im.shape[0])
         axes[i].set_xlim(0, im.shape[1])
-        axes[i].set_title(titles[i], fontsize='medium')
-        axes[i].tick_params(labelsize='x-small') 
-        axes[i].set_anchor('W')
+        axes[i].set_title(titles[i], fontsize="medium")
+        axes[i].tick_params(labelsize="x-small")
+        axes[i].set_anchor("W")
     plt.tight_layout()
 
     fig.canvas.draw()
@@ -486,22 +599,32 @@ def plot_alignment(data, titles=None, save_dir=None):
     return data
 
 
-def plot_embedding(out_dir, embedding, embedding_speaker_id, gender_dict, filename='embedding.png'):
-    colors = 'r','b'
-    labels = 'Female','Male'
+def plot_embedding(
+    out_dir, embedding, embedding_speaker_id, gender_dict, filename="embedding.png"
+):
+    colors = "r", "b"
+    labels = "Female", "Male"
 
     data_x = embedding
-    data_y = np.array([gender_dict[spk_id] == 'M' for spk_id in embedding_speaker_id], dtype=np.int)
-    tsne_model = TSNE(n_components=2, random_state=0, init='random')
+    data_y = np.array(
+        [gender_dict[spk_id] == "M" for spk_id in embedding_speaker_id], dtype=int
+    )
+    tsne_model = TSNE(n_components=2, random_state=0, init="random")
     tsne_all_data = tsne_model.fit_transform(data_x)
     tsne_all_y_data = data_y
 
-    plt.figure(figsize=(10,10))
+    plt.figure(figsize=(10, 10))
     for i, (c, label) in enumerate(zip(colors, labels)):
-        plt.scatter(tsne_all_data[tsne_all_y_data==i,0], tsne_all_data[tsne_all_y_data==i,1], c=c, label=label, alpha=0.5)
+        plt.scatter(
+            tsne_all_data[tsne_all_y_data == i, 0],
+            tsne_all_data[tsne_all_y_data == i, 1],
+            c=c,
+            label=label,
+            alpha=0.5,
+        )
 
     plt.grid(True)
-    plt.legend(loc='upper left')
+    plt.legend(loc="upper left")
 
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, filename))
@@ -509,9 +632,15 @@ def plot_embedding(out_dir, embedding, embedding_speaker_id, gender_dict, filena
 
 
 def save_figure_to_numpy(fig):
-    # save it to a numpy array.
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    # draw the canvas first
+    fig.canvas.draw()
+    # modern matplotlib (>=3.1) supports buffer_rgba() which returns a memoryview of the RGBA buffer
+    rgba_buffer = fig.canvas.buffer_rgba()
+    # convert memoryview/buffer to numpy array
+    data = np.asarray(rgba_buffer)
+    # data is shape (H, W, 4) in RGBA, convert to RGB shape (H, W, 3)
+    if data.shape[-1] == 4:
+        data = data[:, :, :3]
     return data
 
 
@@ -555,7 +684,7 @@ def pad_2D(inputs, maxlen=None):
 def pad_3D(inputs, B, T, L):
     inputs_padded = np.zeros((B, T, L), dtype=np.float32)
     for i, input_ in enumerate(inputs):
-        inputs_padded[i, :np.shape(input_)[0], :np.shape(input_)[1]] = input_
+        inputs_padded[i, : np.shape(input_)[0], : np.shape(input_)[1]] = input_
     return inputs_padded
 
 
