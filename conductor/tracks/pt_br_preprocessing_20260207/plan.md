@@ -2,9 +2,9 @@
 
 ## Phase 1: Analysis & Dependency Selection
 - [x] Task: Evaluate current `text/` module structure and identify integration points for new language support. (cc9bb98)
-- [ ] Task: Research and select the best G2P library for Brazilian Portuguese (e.g., `phonemizer` vs `g2p_en` adaptation).
-    - [ ] Research: Compare accuracy and ease of integration.
-    - [ ] Decision: Select library and document in `tech-stack.md`.
+- [x] Task: Research and select the best G2P library for Brazilian Portuguese (e.g., `phonemizer` vs `g2p_en` adaptation). (9ceab6b)
+    - [x] Research: Compare accuracy and ease of integration. (9ceab6b)
+    - [x] Decision: Select library and document in `tech-stack.md`. (9ceab6b)
 - [ ] Task: Conductor - User Manual Verification 'Analysis & Dependency Selection' (Protocol in workflow.md)
 
 ## Phase 2: Text Normalization Implementation
