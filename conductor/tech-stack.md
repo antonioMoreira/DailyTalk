@@ -14,9 +14,11 @@
 - **HiFi-GAN:** The high-fidelity generative adversarial network used as the vocoder for waveform synthesis.
 
 ## Linguistic & Text Processing
-- **g2p-en / pypinyin:** Libraries for Grapheme-to-Phoneme conversion (will be adapted/replaced for Brazilian Portuguese).
+- **g2p-en / pypinyin:** Libraries for Grapheme-to-Phoneme conversion (used for English / Pinyin).
+- **Custom rule-based G2P (G2P_PTBR):** A lightweight, pure-Python, rule-based G2P implementation for Brazilian Portuguese phonemization to ensure 100% reliability, deterministic behavior, and zero external binary dependencies (like `espeak-ng`).
 - **tgt (TextGrid Tools):** For handling Forced Alignment output (MFA) and phoneme-level timing.
-- **inflect:** For text normalization (number-to-word conversion).
+- **inflect:** For English text normalization (number-to-word conversion).
+- **num2words:** Added for Brazilian Portuguese text normalization (number-to-word conversion).
 
 ## Data Science & Visualization
 - **NumPy & SciPy:** For numerical computation and advanced mathematical functions.

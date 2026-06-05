@@ -32,6 +32,7 @@ dependencies = [
     "einops >= 0.8.0",
     "sentence-transformers >= 3.0.0",
     "transformers >= 4.45.0",
+    "num2words>=0.5.14",
 ]
 
 [dependency-groups]
