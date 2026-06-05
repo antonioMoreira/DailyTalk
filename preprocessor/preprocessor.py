@@ -124,14 +124,14 @@ class Preprocessor:
                 scaler.partial_fit(value.reshape((-1, 1)))
 
         def compute_stats(pitch_scaler, energy_scaler, pitch_dir="pitch", energy_dir="energy"):
-            if self.pitch_normalization:
+            if self.pitch_normalization and hasattr(pitch_scaler, "mean_"):
                 pitch_mean = pitch_scaler.mean_[0]
                 pitch_std = pitch_scaler.scale_[0]
             else:
                 # A numerical trick to avoid normalization...
                 pitch_mean = 0
                 pitch_std = 1
-            if self.energy_normalization:
+            if self.energy_normalization and hasattr(energy_scaler, "mean_"):
                 energy_mean = energy_scaler.mean_[0]
                 energy_std = energy_scaler.scale_[0]
             else:
@@ -299,7 +299,7 @@ class Preprocessor:
         return (train_frame ,train_phone, val_frame ,val_phone)
 
     def load_audio(self, wav_path):
-        wav_raw, _ = librosa.load(wav_path, self.sampling_rate)
+        wav_raw, _ = librosa.load(wav_path, sr=self.sampling_rate)
         _, index = librosa.effects.trim(wav_raw, top_db=self.trim_top_db, frame_length=self.filter_length, hop_length=self.hop_length)
         wav = wav_raw[index[0]:index[1]]
         duration = (index[1] - index[0]) / self.hop_length
@@ -391,7 +391,7 @@ class Preprocessor:
                 phone_out_exist = False
             else:
                 # Read and trim wav files
-                wav, _ = librosa.load(wav_path, self.sampling_rate)
+                wav, _ = librosa.load(wav_path, sr=self.sampling_rate)
                 wav = wav.astype(np.float32)
                 wav = wav[
                     int(self.sampling_rate * start) : int(self.sampling_rate * end)
@@ -517,6 +517,8 @@ class Preprocessor:
     def normalize(self, in_dir, mean, std):
         max_value = np.finfo(np.float64).min
         min_value = np.finfo(np.float64).max
+        if not os.path.exists(in_dir) or not os.listdir(in_dir):
+            return 0.0, 0.0
         for filename in os.listdir(in_dir):
             filename = os.path.join(in_dir, filename)
             values = (np.load(filename) - mean) / std

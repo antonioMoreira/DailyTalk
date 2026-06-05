@@ -1,34 +1,27 @@
-# Specification: Brazilian Portuguese Text Preprocessing
+# Specification: English Text Preprocessing & Alignment for DailyTalk
 
 ## Context
-The current DailyTalk pipeline uses `text/cleaners.py` (English-specific regex) and `text/cmudict.py` (English dictionary) for text processing. To support Brazilian Portuguese (PT-BR), we must adapt or replace these modules with language-appropriate tools. This track focuses on enabling the pipeline to accept PT-BR text input, normalize it (handle numbers, abbreviations, currency), and convert it to phonemes suitable for TTS model input.
+The goal is to execute the preprocessing and alignment steps for the original English DailyTalk dataset. The pipeline should use the English `g2p_en` grapheme-to-phoneme library and perform feature extraction (Log-Mel spectrograms, F0 pitch contours, signal energy, sentence-level transformer embeddings, and alignment priors) with unsupervised duration modeling (where `learn_alignment: True` is configured, bypassing supervised MFA/TextGrid alignments). The output files must be written under the `raw_data/preprocessed_data/DailyTalk` folder.
 
 ## Requirements
 
-### 1. Text Normalization
-- Implement a `text/cleaners_ptbr.py` module.
-- Support expansion of numbers (e.g., "123" -> "cento e vinte e três").
-- Support expansion of common PT-BR abbreviations (e.g., "Sr." -> "Senhor", "Av." -> "Avenida").
-- Handle specific punctuation and casing rules relevant to PT-BR.
+### 1. English Text Normalization & Phonemization
+- Ensure that the text preprocessing pipeline correctly handles the original English transcripts from DailyTalk.
+- Use `g2p_en` for English text-to-phoneme mapping.
+- Automatically resolve all necessary NLTK corpora requirements (`averaged_perceptron_tagger_eng`) in a non-interactive manner.
 
-### 2. Grapheme-to-Phoneme (G2P) Conversion
-- Implement a `text/g2p_ptbr.py` module or integrate an external library (e.g., `phonemizer` with `espeak-ng` backend).
-- Ensure the phoneme set is compatible with the model's symbol table or define a new symbol table.
-- Ideally, output IPA (International Phonetic Alphabet) symbols to maintain consistency with modern TTS practices, or map to a simplified set if preferred.
+### 2. Audio Loading Compatibility
+- Ensure full compatibility of audio loading functions with modern Librosa APIs (e.g., using explicit parameter keywords like `sr=sampling_rate` instead of deprecated positional parameters).
+- Correct window centering functions in STFT processing (`pad_center` with keyword parameter `size`).
 
-### 3. Symbol Set Update
-- Review `text/symbols.py`.
-- Add necessary PT-BR phonemes if not already present.
-- Ensure compatibility with existing special tokens (pads, eos).
+### 3. Graceful Scaling and Stat Reduction
+- Support unsupervised alignment flow when no supervised `.TextGrid` files exist.
+- Update the preprocessing feature scaling/statistics step to gracefully handle unfitted phone-level scalers (e.g. `StandardScaler` objects for phone-level statistics which are not used in unsupervised training) without raising attribute errors.
+- Ensure statistical calculations write successfully to `stats.json`, `train_frame.txt`, and `val_frame.txt`.
 
-### 4. Integration
-- Update `preprocess.py` to allow selecting the PT-BR cleaner and G2P module via configuration or arguments.
-
-## Constraints
-- Must maintain the existing API structure where possible to minimize refactoring of `train.py` and `synthesize.py`.
-- External dependencies (like `espeak-ng`) must be documented in `requirements.txt` or system setup instructions.
+### 4. Path Organization
+- Write all preprocessed data into `./raw_data/preprocessed_data/DailyTalk` and read raw data from the lowercase path `./raw_data/dailytalk`.
 
 ## Verification
-- Unit tests for number expansion (e.g., verify "R$ 10,00" becomes "dez reais").
-- Unit tests for phonemization (e.g., verify "casa" becomes /'ka.za/).
-- End-to-end test: Run a sample PT-BR sentence through the full preprocessing pipeline and verify the output format matches the model's expected input (sequence of IDs).
+- Preprocessing completes without errors and outputs all extracted features (mel spectrograms, pitch/energy contours, embeddings, priors) to `raw_data/preprocessed_data/DailyTalk/`.
+- Verifying files are successfully split into training and validation list files.

@@ -1,36 +1,17 @@
-# Implementation Plan - Adapt text preprocessing and phonemization for Brazilian Portuguese
+# Implementation Plan - English Preprocessing and Alignment
 
-## Phase 1: Analysis & Dependency Selection
-- [x] Task: Evaluate current `text/` module structure and identify integration points for new language support. (cc9bb98)
-- [x] Task: Research and select the best G2P library for Brazilian Portuguese (e.g., `phonemizer` vs `g2p_en` adaptation). (9ceab6b)
-    - [x] Research: Compare accuracy and ease of integration. (9ceab6b)
-    - [x] Decision: Select library and document in `tech-stack.md`. (9ceab6b)
-- [ ] Task: Conductor - User Manual Verification 'Analysis & Dependency Selection' (Protocol in workflow.md)
+## Phase 1: Path & Compatibility Configuration
+- [x] Task: Update `config/DailyTalk/preprocess.yaml` raw data path to point to case-sensitive `./raw_data/dailytalk` and output directory to `./raw_data/preprocessed_data/DailyTalk`.
+- [x] Task: Resolve required NLTK English model files (`averaged_perceptron_tagger_eng`) for G2P tokenization.
 
-## Phase 2: Text Normalization Implementation
-- [ ] Task: Implement `text/cleaners_ptbr.py`.
-    - [ ] Sub-task: Create module file.
-    - [ ] Sub-task: Implement number expansion logic (using `num2words` or similar).
-    - [ ] Sub-task: Implement abbreviation expansion map.
-    - [ ] Sub-task: Write unit tests for normalization.
-- [ ] Task: Conductor - User Manual Verification 'Text Normalization Implementation' (Protocol in workflow.md)
+## Phase 2: Librosa & STFT Modern API Adaptation
+- [x] Task: Fix deprecated positional parameter usage in `librosa.load` in `preprocessor/dailytalk.py` and `preprocessor/preprocessor.py`.
+- [x] Task: Fix deprecated parameters in STFT window centering functions (`pad_center`).
 
-## Phase 3: G2P & Symbol Adaptation
-- [ ] Task: Implement `text/g2p_ptbr.py`.
-    - [ ] Sub-task: specific wrapper for selected G2P library.
-    - [ ] Sub-task: Ensure output format aligns with expected list of phonemes.
-    - [ ] Sub-task: Write unit tests for G2P conversion.
-- [ ] Task: Update `text/symbols.py` to include Brazilian Portuguese phonemes.
-    - [ ] Sub-task: Define new symbol set if IPA is used.
-    - [ ] Sub-task: Ensure backward compatibility or configuration switching.
-- [ ] Task: Conductor - User Manual Verification 'G2P & Symbol Adaptation' (Protocol in workflow.md)
+## Phase 3: Robust Feature Scaling Statistics
+- [x] Task: Implement safe scaler checks in `preprocessor/preprocessor.py` to prevent `AttributeError` from unfitted StandardScalers in unsupervised duration mode.
+- [x] Task: Ensure empty directories (such as phone-level directories when unsupervised duration modeling is active) do not crash feature normalizations.
 
-## Phase 4: Integration & Verification
-- [ ] Task: Update `preprocess.py` (and potentially `config/DailyTalk/preprocess.yaml`) to use PT-BR modules.
-    - [ ] Sub-task: Add configuration option for language/cleaner.
-    - [ ] Sub-task: Connect new cleaner and G2P to the preprocessing pipeline.
-- [ ] Task: Run end-to-end preprocessing test with sample MuPe data.
-    - [ ] Sub-task: Create a small sample file.
-    - [ ] Sub-task: Run `preprocess.py` on sample.
-    - [ ] Sub-task: Verify output files (`.txt`, `.npy`, etc.) are generated correctly.
-- [ ] Task: Conductor - User Manual Verification 'Integration & Verification' (Protocol in workflow.md)
+## Phase 4: Verification & Execution
+- [x] Task: Execute the full preprocessing pipeline using `preprocess.py --dataset DailyTalk`.
+- [x] Task: Verify successful creation of `stats.json`, `train_frame.txt`, and `val_frame.txt`.

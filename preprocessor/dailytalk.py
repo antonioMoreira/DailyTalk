@@ -32,7 +32,7 @@ def prepare_align(config):
             text = _clean_text(text, cleaners)
 
             os.makedirs(os.path.join(out_dir, sub_dir, turn_name), exist_ok=True)
-            wav, _ = librosa.load(wav_path, sampling_rate)
+            wav, _ = librosa.load(wav_path, sr=sampling_rate)
             wav = wav / max(abs(wav)) * max_wav_value
             wavfile.write(
                 os.path.join(out_dir, sub_dir, turn_name, f"{base_name}.wav"),
