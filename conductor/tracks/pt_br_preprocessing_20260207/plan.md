@@ -1,7 +1,7 @@
 # Implementation Plan - Adapt text preprocessing and phonemization for Brazilian Portuguese
 
 ## Phase 1: Analysis & Dependency Selection
-- [ ] Task: Evaluate current `text/` module structure and identify integration points for new language support.
+- [x] Task: Evaluate current `text/` module structure and identify integration points for new language support. (cc9bb98)
 - [ ] Task: Research and select the best G2P library for Brazilian Portuguese (e.g., `phonemizer` vs `g2p_en` adaptation).
     - [ ] Research: Compare accuracy and ease of integration.
     - [ ] Decision: Select library and document in `tech-stack.md`.
