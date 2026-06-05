@@ -1,9 +1,4 @@
 [project]
-name = "dailytalk"
-version = "0.1.0"
-description = "DailyTalk: Spoken Dialogue Dataset for Conversational Text-to-Speech"
-readme = "README.md"
-requires-python = ">=3.14"
 dependencies = [
     "product_key_memory >= 0.2.0",
     "local_attention >= 1.9.0",
@@ -29,11 +24,15 @@ dependencies = [
     "tqdm>=4.66.0",
     "unidecode >= 1.3.8",
     "pillow >= 10.3.0",
-    "einops >= 0.8.0",
+    "einops >= 0.8.0",24 GB	
     "sentence-transformers >= 3.0.0",
     "transformers >= 4.45.0",
     "num2words>=0.5.14",
-]
+]name = "dailytalk"
+version = "0.1.0"
+description = "DailyTalk: Spoken Dialogue Dataset for Conversational Text-to-Speech"
+readme = "README.md"
+requires-python = ">=3.14"
 
 [dependency-groups]
 dev = [
@@ -51,14 +50,7 @@ target-version = "py314"
 line-length = 100
 
 # Files and directories to exclude
-exclude = [
-    ".git",
-    ".venv",
-    "__pycache__",
-    "build",
-    "dist",
-    "preprocessed_data",
-]
+exclude = [".git", ".venv", "__pycache__", "build", "dist", "preprocessed_data"]
 
 [tool.ruff.lint]
 # Select rules:
@@ -70,23 +62,13 @@ exclude = [
 # C4: flake8-comprehensions
 # SIM: flake8-simplify
 # A: flake8-builtins
-select = [
-    "E",
-    "W",
-    "F",
-    "I",
-    "UP",
-    "B",
-    "C4",
-    "SIM",
-    "A",
-]
+select = ["E", "W", "F", "I", "UP", "B", "C4", "SIM", "A"]
 
 # Rule exclusions
 ignore = [
-    "E501",  # Line too long (handled by formatter)
-    "E731",  # Do not assign a lambda expression, use a def
-    "E402",  # Module level import not at top of file
+    "E501", # Line too long (handled by formatter)
+    "E731", # Do not assign a lambda expression, use a def
+    "E402", # Module level import not at top of file
 ]
 
 [tool.ruff.format]
@@ -103,17 +85,4 @@ python-platform = "linux"
 
 [tool.ty.src]
 respect-ignore-files = true
-exclude = [
-    ".git",
-    ".venv",
-    "__pycache__",
-    "build",
-    "dist",
-    "preprocessed_data",
-]
-
-
-
-
-
-
+exclude = [".git", ".venv", "__pycache__", "build", "dist", "preprocessed_data"]
