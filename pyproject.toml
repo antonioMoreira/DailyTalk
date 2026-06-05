@@ -38,6 +38,7 @@ dependencies = [
 dev = [
     "pyrefly>=1.0.0",
     "ruff>=0.15.14",
+    "ty>=0.0.43",
     "types-tqdm>=4.67.3.20260518",
 ]
 
@@ -92,6 +93,24 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+
+[tool.ty.environment]
+# Target Python version 3.14 to match project requires-python
+python-version = "3.14"
+python-platform = "linux"
+
+[tool.ty.src]
+respect-ignore-files = true
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "preprocessed_data",
+]
+
 
 
 
