@@ -1,12 +1,12 @@
 """ from https://github.com/keithito/tacotron """
 import re
 
-from text import cleaners
-from text.symbols import _punctuation, _silences, symbols
+from dailytalk.text import cleaners
+from dailytalk.text.symbols import _punctuation, _silences, symbols
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
-_id_to_symbol = {i: s for i, s in enumerate(symbols)}
+_id_to_symbol = dict(enumerate(symbols))
 
 # Regular expression matching text enclosed in curly braces:
 _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
@@ -61,7 +61,7 @@ def sequence_to_text(sequence):
             s = _id_to_symbol[symbol_id]
             # Enclose ARPAbet back in curly braces:
             if len(s) > 1 and s[0] == "@":
-                s = "{%s}" % s[1:]
+                s = f"{{{s[1:]}}}"
             result += s
     return result.replace("}{", " ")
 
@@ -74,7 +74,7 @@ def _clean_text(text, cleaner_names):
     for name in cleaner_names:
         cleaner = getattr(cleaners, name)
         if not cleaner:
-            raise Exception("Unknown cleaner: %s" % name)
+            raise Exception(f"Unknown cleaner: {name}")
         text = cleaner(text)
     return text
 

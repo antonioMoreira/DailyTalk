@@ -4,8 +4,8 @@ import os
 import numpy as np
 import torch
 
-import hifigan
-from model import CompTransTTS, ScheduledOptim
+from dailytalk import hifigan
+from dailytalk.model import CompTransTTS, ScheduledOptim
 
 
 def get_model(args, configs, device, train=False):
@@ -30,7 +30,7 @@ def get_model(args, configs, device, train=False):
         return model, scheduled_optim
 
     model.eval()
-    model.requires_grad_ = False
+    model.requires_grad_(False)
     return model
 
 
@@ -85,7 +85,7 @@ def vocoder_infer(mels, vocoder, model_config, preprocess_config, lengths=None):
         wavs.cpu().numpy()
         * preprocess_config["preprocessing"]["audio"]["max_wav_value"]
     ).astype("int16")
-    wavs = [wav for wav in wavs]
+    wavs = list(wavs)
 
     for i in range(len(mels)):
         if lengths is not None:

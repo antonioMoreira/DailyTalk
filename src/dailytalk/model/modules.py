@@ -7,8 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from numba import jit, prange
-
-from utils.tools import (
+from dailytalk.utils.tools import (
     get_mask_from_lengths,
     get_phoneme_level_energy,
     get_phoneme_level_pitch,
@@ -57,7 +56,7 @@ def b_mas(b_attn_map, in_lens, out_lens, width=1):
     assert width == 1
     attn_out = np.zeros_like(b_attn_map)
 
-    for b in prange(b_attn_map.shape[0]):
+    for b in prange(b_attn_map.shape[0]):  # type: ignore
         out = mas_width1(b_attn_map[b, 0, : out_lens[b], : in_lens[b]])
         attn_out[b, 0, : out_lens[b], : in_lens[b]] = out
     return attn_out
@@ -94,7 +93,7 @@ class PostNet(nn.Module):
             )
         )
 
-        for i in range(1, postnet_n_convolutions - 1):
+        for _i in range(1, postnet_n_convolutions - 1):
             self.convolutions.append(
                 nn.Sequential(
                     ConvNorm(
@@ -248,7 +247,7 @@ class VarianceAdaptor(nn.Module):
         return torch.from_numpy(
             pad_1D(
                 [get_phoneme_level_pitch(dur[:len], var) for dur, len, var \
-                        in zip(duration.int().cpu().numpy(), src_len.cpu().numpy(), pitch_frame.cpu().numpy())]
+                        in zip(duration.int().cpu().numpy(), src_len.cpu().numpy(), pitch_frame.cpu().numpy(), strict=False)]
             )
         ).float().to(pitch_frame.device)
 
@@ -256,7 +255,7 @@ class VarianceAdaptor(nn.Module):
         return torch.from_numpy(
             pad_1D(
                 [get_phoneme_level_energy(dur[:len], var) for dur, len, var \
-                        in zip(duration.int().cpu().numpy(), src_len.cpu().numpy(), energy_frame.cpu().numpy())]
+                        in zip(duration.int().cpu().numpy(), src_len.cpu().numpy(), energy_frame.cpu().numpy(), strict=False)]
             )
         ).float().to(energy_frame.device)
 
@@ -364,7 +363,7 @@ class VarianceAdaptor(nn.Module):
         # Upsampling from src length to mel length
         if attn_prior is not None: # Trainig of unsupervised duration modeling
             if step < self.binarization_start_steps:
-                A_soft = attn_soft.squeeze(1)
+                A_soft = attn_soft.squeeze(1)  # type: ignore
                 x = torch.bmm(A_soft,x)
             else:
                 x, mel_len = self.length_regulator(x, attn_hard_dur, max_len)
@@ -519,22 +518,19 @@ class LengthRegulator(nn.Module):
         super().__init__()
 
     def LR(self, x, duration, max_len):
-        output = list()
-        mel_len = list()
-        for batch, expand_target in zip(x, duration):
+        output = []
+        mel_len = []
+        for batch, expand_target in zip(x, duration, strict=False):
             expanded = self.expand(batch, expand_target)
             output.append(expanded)
             mel_len.append(expanded.shape[0])
 
-        if max_len is not None:
-            output = pad(output, max_len)
-        else:
-            output = pad(output)
+        output = pad(output, max_len) if max_len is not None else pad(output)
 
         return output, torch.LongTensor(mel_len).to(x.device)
 
     def expand(self, batch, predicted):
-        out = list()
+        out = []
 
         for i, vec in enumerate(batch):
             expand_size = predicted[i].item()

@@ -4,10 +4,9 @@ from math import ceil, gcd
 import torch
 from einops import rearrange, repeat
 from rotary_embedding_torch import RotaryEmbedding, apply_rotary_emb
+from dailytalk.text.symbols import symbols
 from torch import einsum, nn
 from torch.nn import functional as F
-
-from text.symbols import symbols
 
 from .blocks import (
     get_sinusoid_encoding_table,
@@ -24,7 +23,7 @@ def default(val, d):
 
 
 def lcm(*numbers):
-    return int(functools.reduce(lambda x, y: int((x * y) / gcd(x, y)), numbers, 1))
+    return int(functools.reduce(lambda x, y: int((x * y) / gcd(int(x), int(y))), numbers, 1))
 
 
 def pad_to_multiple(tensor, multiple, dim = -1, value = 0):
@@ -137,7 +136,6 @@ class Decoder(nn.Module):
 
     def forward(self, enc_seq, mask):
 
-        dec_slf_attn_list = []
         batch_size, max_len = enc_seq.shape[0], enc_seq.shape[1]
 
         # -- Forward
@@ -193,12 +191,12 @@ class FFTBlock(torch.nn.Module):
 
     def forward(self, x, mask=None):
 
-        for attn, ff in self.layers:
+        for attn, ff in self.layers:  # type: ignore
             x = attn(x, mask = mask) + x
-            x = x.masked_fill(mask.unsqueeze(-1), 0)
+            x = x.masked_fill(mask.unsqueeze(-1), 0)  # type: ignore
 
             x = ff(x) + x
-            x = x.masked_fill(mask.unsqueeze(-1), 0)
+            x = x.masked_fill(mask.unsqueeze(-1), 0)  # type: ignore
 
         return x
         enc_output, enc_slf_attn = self.slf_attn(
@@ -283,14 +281,14 @@ class LongShortAttention(nn.Module):
 
         # split heads
 
-        q, kv = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h = h), qkv)
+        q, kv = (rearrange(t, 'b n (h d) -> (b h) n d', h = h) for t in qkv)
 
         # rotary embedding
 
         if exists(self.pos_emb):
             rotary_emb = self.pos_emb(seq_range, cache_key = padded_len)
             rotary_emb = rearrange(rotary_emb, 'n d -> () n d')
-            q, kv = map(lambda t: apply_rotary_emb(rotary_emb, t), (q, kv))
+            q, kv = (apply_rotary_emb(rotary_emb, t) for t in (q, kv))
 
         # scale queries
 
@@ -330,7 +328,7 @@ class LongShortAttention(nn.Module):
             pkv = self.to_dynamic_proj(kv)
 
             if exists(mask):
-                pkv.masked_fill_(~mask[..., None], mask_value)
+                 pkv.masked_fill_(~mask[..., None], mask_value)  # type: ignore
 
             pkv = pkv.softmax(dim = -2)
 

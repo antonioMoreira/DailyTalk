@@ -3,10 +3,10 @@ import os
 import numpy as np
 import torch
 
-from deepspeaker.audio_ds import read_mfcc
-from deepspeaker.batcher import sample_from_mfcc
-from deepspeaker.constants import NUM_FRAMES, SAMPLE_RATE, WIN_LENGTH
-from deepspeaker.conv_models import DeepSpeakerModel, load_weights_from_h5
+from dailytalk.deepspeaker.audio_ds import read_mfcc
+from dailytalk.deepspeaker.batcher import sample_from_mfcc
+from dailytalk.deepspeaker.constants import NUM_FRAMES, SAMPLE_RATE, WIN_LENGTH
+from dailytalk.deepspeaker.conv_models import DeepSpeakerModel, load_weights_from_h5
 
 
 def build_model(ckpt_path):

@@ -1,8 +1,7 @@
 import torch
+from dailytalk.text.symbols import symbols
 from torch import nn
 from torch.nn import functional as F
-
-from text.symbols import symbols
 
 from .blocks import (
     get_sinusoid_encoding_table,
@@ -100,7 +99,6 @@ class Decoder(nn.Module):
 
     def forward(self, enc_seq, mask):
 
-        dec_slf_attn_list = []
         batch_size, max_len = enc_seq.shape[0], enc_seq.shape[1]
 
         # -- Forward
@@ -152,19 +150,19 @@ class FFTBlock(torch.nn.Module):
             ]))
 
         # weight tie projections across all layers
-        first_block, _ = self.layers[0]
-        for block, _ in self.layers[1:]:
+        first_block, _ = self.layers[0]  # type: ignore
+        for block, _ in self.layers[1:]:  # type: ignore
             block.fn.to_q_attn_logits = first_block.fn.to_q_attn_logits
             block.fn.to_k_attn_logits = first_block.fn.to_k_attn_logits
 
     def forward(self, x, mask=None):
 
-        for attn, ff in self.layers:
+        for attn, ff in self.layers:  # type: ignore
             x = attn(x, mask = mask) + x
-            x = x.masked_fill(mask.unsqueeze(-1), 0)
+            x = x.masked_fill(mask.unsqueeze(-1), 0)  # type: ignore
 
             x = ff(x) + x
-            x = x.masked_fill(mask.unsqueeze(-1), 0)
+            x = x.masked_fill(mask.unsqueeze(-1), 0)  # type: ignore
 
         return x
         enc_output, enc_slf_attn = self.slf_attn(

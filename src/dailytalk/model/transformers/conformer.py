@@ -2,10 +2,9 @@ import math
 
 import torch
 import torch.nn as nn
+from dailytalk.text.symbols import symbols
 from torch import Tensor
 from torch.nn import functional as F
-
-from text.symbols import symbols
 
 from .blocks import (
     GLU,
@@ -192,7 +191,7 @@ class ConformerBlock(nn.Module):
             conv_dropout_p: float = 0.1,
             conv_kernel_size: int = 31,
             half_step_residual: bool = True,
-            position_enc: Tensor = None,
+            position_enc: Tensor | None = None,
             max_seq_len: int = 10000,
     ):
         super().__init__()
@@ -333,9 +332,9 @@ class MultiHeadedSelfAttentionModule(nn.Module):
                 inputs.device
             )
         else:
-            pos_embedding = self.positional_encoding[
-                :, :seq_length, :
-            ].expand(batch_size, -1, -1)
+             pos_embedding = self.positional_encoding[  # type: ignore
+                 :, :seq_length, :
+             ].expand(batch_size, -1, -1)
 
         inputs = self.layer_norm(inputs)
         outputs = self.attention(inputs, inputs, inputs, pos_embedding=pos_embedding, mask=mask)

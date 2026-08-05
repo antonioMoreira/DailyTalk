@@ -10,14 +10,14 @@ try:
                 return ModuleSpec(fullname, self, is_package=self.is_package(fullname))
             return None
         # pyrefly: ignore [missing-attribute]
-        six._SixMetaPathImporter.find_spec = find_spec
+        six._SixMetaPathImporter.find_spec = find_spec  # type: ignore
 except Exception:
     pass
 
 import argparse
 
-from preprocessor.preprocessor import Preprocessor
-from utils.tools import get_configs_of
+from dailytalk.preprocessor.preprocessor import Preprocessor
+from dailytalk.utils.tools import get_configs_of
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

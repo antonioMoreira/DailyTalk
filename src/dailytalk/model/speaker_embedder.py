@@ -1,7 +1,6 @@
 
 import torch.nn as nn
-
-from deepspeaker import embedding
+from dailytalk.deepspeaker import embedding
 
 
 class PreDefinedEmbedder(nn.Module):

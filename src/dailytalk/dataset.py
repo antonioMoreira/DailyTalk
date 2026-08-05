@@ -4,8 +4,8 @@ import os
 import numpy as np
 from torch.utils.data import Dataset
 
-from text import text_to_sequence
-from utils.tools import get_variance_level, pad_1D, pad_2D, pad_3D
+from dailytalk.text import text_to_sequence
+from dailytalk.utils.tools import get_variance_level, pad_1D, pad_2D, pad_3D
 
 
 class Dataset(Dataset):
@@ -31,7 +31,7 @@ class Dataset(Dataset):
         self.basename, self.speaker, self.text, self.raw_text, self.emotion = self.process_meta(
             filename
         )
-        self.basename_to_id = dict((v, k) for k, v in enumerate(self.basename))
+        self.basename_to_id = {v: k for k, v in enumerate(self.basename)}
         with open(os.path.join(self.preprocessed_path, "speakers.json")) as f:
             self.speaker_map = json.load(f)
         with open(os.path.join(self.preprocessed_path, "emotions.json")) as f:
@@ -42,13 +42,13 @@ class Dataset(Dataset):
     def __len__(self):
         return len(self.text)
 
-    def __getitem__(self, idx):
-        basename = self.basename[idx]
-        speaker = self.speaker[idx]
+    def __getitem__(self, index):
+        basename = self.basename[index]
+        speaker = self.speaker[index]
         speaker_id = self.speaker_map[speaker]
-        emotion_id = self.emotion_map[self.emotion[idx]] if self.load_emotion else None
-        raw_text = self.raw_text[idx]
-        phone = np.array(text_to_sequence(self.text[idx], self.cleaners))
+        emotion_id = self.emotion_map[self.emotion[index]] if self.load_emotion else None
+        raw_text = self.raw_text[index]
+        phone = np.array(text_to_sequence(self.text[index], self.cleaners))
         mel_path = os.path.join(
             self.preprocessed_path,
             f"mel_{self.pitch_level_tag}",
@@ -93,15 +93,8 @@ class Dataset(Dataset):
         dialog = basename.split("_")[2].strip("d")
         turn = int(basename.split("_")[0])
         history_len = min(self.max_history_len, turn)
-        history_text = list()
-        history_text_emb = list()
-        history_text_len = list()
-        history_pitch = list()
-        history_energy = list()
-        history_duration = list()
-        history_emotion = list()
-        history_speaker = list()
-        history_mel_len = list()
+        history_text_emb = []
+        history_speaker = []
         history = None
         if self.history_type != "none":
             history_basenames = sorted([tg_path.replace(".wav", "") for tg_path in os.listdir(os.path.join(self.raw_path, self.sub_dir_name, f"{dialog}")) if ".wav" in tg_path], key=lambda x:int(x.split("_")[0]))
@@ -240,24 +233,23 @@ class Dataset(Dataset):
             durations = pad_1D(durations)
 
         history_info = None
-        if self.history_type != "none":
-            if self.history_type == "Guo":
-                text_embs = [data[idx]["history"]["text_emb"] for idx in idxs]
-                history_lens = [data[idx]["history"]["history_len"] for idx in idxs]
-                history_text_embs = [data[idx]["history"]["history_text_emb"] for idx in idxs]
-                history_speakers = [data[idx]["history"]["history_speaker"] for idx in idxs]
+        if self.history_type != "none" and self.history_type == "Guo":
+            text_embs = [data[idx]["history"]["text_emb"] for idx in idxs]
+            history_lens = [data[idx]["history"]["history_len"] for idx in idxs]
+            history_text_embs = [data[idx]["history"]["history_text_emb"] for idx in idxs]
+            history_speakers = [data[idx]["history"]["history_speaker"] for idx in idxs]
 
-                text_embs = np.array(text_embs)
-                history_lens = np.array(history_lens)
-                history_text_embs = np.array(history_text_embs)
-                history_speakers = np.array(history_speakers)
+            text_embs = np.array(text_embs)
+            history_lens = np.array(history_lens)
+            history_text_embs = np.array(history_text_embs)
+            history_speakers = np.array(history_speakers)
 
-                history_info = (
-                    text_embs,
-                    history_lens,
-                    history_text_embs,
-                    history_speakers,
-                )
+            history_info = (
+                text_embs,
+                history_lens,
+                history_text_embs,
+                history_speakers,
+            )
 
         return (
             ids,
@@ -293,7 +285,7 @@ class Dataset(Dataset):
         if not self.drop_last and len(tail) > 0:
             idx_arr += [tail.tolist()]
 
-        output = list()
+        output = []
         for idx in idx_arr:
             output.append(self.reprocess(data, idx))
 
@@ -316,7 +308,7 @@ class TextDataset(Dataset):
         self.basename, self.speaker, self.text, self.raw_text, self.emotion = self.process_meta(
             filepath
         )
-        self.basename_to_id = dict((v, k) for k, v in enumerate(self.basename))
+        self.basename_to_id = {v: k for k, v in enumerate(self.basename)}
         with open(os.path.join(self.preprocessed_path, "speakers.json")) as f:
             self.speaker_map = json.load(f)
         with open(os.path.join(self.preprocessed_path, "emotions.json")) as f:
@@ -325,13 +317,13 @@ class TextDataset(Dataset):
     def __len__(self):
         return len(self.text)
 
-    def __getitem__(self, idx):
-        basename = self.basename[idx]
-        speaker = self.speaker[idx]
+    def __getitem__(self, index):
+        basename = self.basename[index]
+        speaker = self.speaker[index]
         speaker_id = self.speaker_map[speaker]
-        emotion_id = self.emotion_map[self.emotion[idx]] if self.load_emotion else None
-        raw_text = self.raw_text[idx]
-        phone = np.array(text_to_sequence(self.text[idx], self.cleaners))
+        emotion_id = self.emotion_map[self.emotion[index]] if self.load_emotion else None
+        raw_text = self.raw_text[index]
+        phone = np.array(text_to_sequence(self.text[index], self.cleaners))
         spker_embed = np.load(os.path.join(
             self.preprocessed_path,
             "spker_embed",
@@ -342,15 +334,8 @@ class TextDataset(Dataset):
         dialog = basename.split("_")[2].strip("d")
         turn = int(basename.split("_")[0])
         history_len = min(self.max_history_len, turn)
-        history_text = list()
-        history_text_emb = list()
-        history_text_len = list()
-        history_pitch = list()
-        history_energy = list()
-        history_duration = list()
-        history_emotion = list()
-        history_speaker = list()
-        history_mel_len = list()
+        history_text_emb = []
+        history_speaker = []
         history = None
         if self.history_type != "none":
             history_basenames = sorted([tg_path.replace(".wav", "") for tg_path in os.listdir(os.path.join(self.raw_path, self.sub_dir_name, f"{dialog}")) if ".wav" in tg_path], key=lambda x:int(x.split("_")[0]))
@@ -457,23 +442,22 @@ class TextDataset(Dataset):
         texts = pad_1D(texts)
 
         history_info = None
-        if self.history_type != "none":
-            if self.history_type == "Guo":
-                text_embs = [d[6]["text_emb"] for d in data]
-                history_lens = [d[6]["history_len"] for d in data]
-                history_text_embs = [d[6]["history_text_emb"] for d in data]
-                history_speakers = [d[6]["history_speaker"] for d in data]
+        if self.history_type != "none" and self.history_type == "Guo":
+            text_embs = [d[6]["text_emb"] for d in data]
+            history_lens = [d[6]["history_len"] for d in data]
+            history_text_embs = [d[6]["history_text_emb"] for d in data]
+            history_speakers = [d[6]["history_speaker"] for d in data]
 
-                text_embs = np.array(text_embs)
-                history_lens = np.array(history_lens)
-                history_text_embs = np.array(history_text_embs)
-                history_speakers = np.array(history_speakers)
+            text_embs = np.array(text_embs)
+            history_lens = np.array(history_lens)
+            history_text_embs = np.array(history_text_embs)
+            history_speakers = np.array(history_speakers)
 
-                history_info = (
-                    text_embs,
-                    history_lens,
-                    history_text_embs,
-                    history_speakers,
-                )
+            history_info = (
+                text_embs,
+                history_lens,
+                history_text_embs,
+                history_speakers,
+            )
 
         return ids, raw_texts, speakers, texts, text_lens, max(text_lens), spker_embeds, emotions, history_info

@@ -1,9 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from dailytalk.text.symbols import symbols
 from torch.nn import functional as F
-
-from text.symbols import symbols
 
 from .blocks import (
     LinearNorm,
@@ -216,7 +215,8 @@ class MultiHeadAttention(nn.Module):
         k = k.permute(2, 0, 1, 3).contiguous().view(-1, len_k, d_k)  # (n*b) x lk x dk
         v = v.permute(2, 0, 1, 3).contiguous().view(-1, len_v, d_v)  # (n*b) x lv x dv
 
-        mask = mask.repeat(n_head, 1, 1)  # (n*b) x .. x ..
+        if mask is not None:
+            mask = mask.repeat(n_head, 1, 1)  # (n*b) x .. x ..
         output, attn = self.attention(q, k, v, mask=mask)
 
         output = output.view(n_head, sz_b, len_q, d_v)

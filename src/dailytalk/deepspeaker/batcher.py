@@ -7,9 +7,9 @@ from random import choice
 import numpy as np
 from tqdm import tqdm
 
-from deepspeaker.audio_ds import Audio, pad_mfcc
-from deepspeaker.conv_models import DeepSpeakerModel
-from deepspeaker.utils import train_test_sp_to_utt
+from dailytalk.deepspeaker.audio_ds import Audio, pad_mfcc
+from dailytalk.deepspeaker.conv_models import DeepSpeakerModel
+from dailytalk.deepspeaker.utils import train_test_sp_to_utt
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class SparseCategoricalSpeakers:
     def __init__(self, speakers_list):
         self.speaker_ids = sorted(speakers_list)
         assert len(set(self.speaker_ids)) == len(self.speaker_ids)  # all unique.
-        self.map = dict(zip(self.speaker_ids, range(len(self.speaker_ids))))
+        self.map = dict(zip(self.speaker_ids, range(len(self.speaker_ids)), strict=False))
 
     def get_index(self, speaker_id):
         return self.map[speaker_id]
@@ -46,12 +46,11 @@ class SparseCategoricalSpeakers:
 class OneHotSpeakers:
 
     def __init__(self, speakers_list):
-        from tensorflow.keras.utils import to_categorical
         self.speaker_ids = sorted(speakers_list)
         self.int_speaker_ids = list(range(len(self.speaker_ids)))
-        self.map_speakers_to_index = dict([(k, v) for (k, v) in zip(self.speaker_ids, self.int_speaker_ids)])
-        self.map_index_to_speakers = dict([(v, k) for (k, v) in zip(self.speaker_ids, self.int_speaker_ids)])
-        self.speaker_categories = to_categorical(self.int_speaker_ids, num_classes=len(self.speaker_ids))
+        self.map_speakers_to_index = dict(zip(self.speaker_ids, self.int_speaker_ids, strict=False))
+        self.map_index_to_speakers = {v: k for (k, v) in zip(self.speaker_ids, self.int_speaker_ids, strict=False)}
+        self.speaker_categories = np.eye(len(self.speaker_ids))
 
     def get_speaker_from_index(self, index):
         return self.map_index_to_speakers[index]
@@ -102,7 +101,7 @@ class LazyTripletBatcher:
                 mfcc = sample_from_mfcc_file(selected_utterance, self.max_length)
                 embeddings_utterances.append(selected_utterance)
                 model_inputs.append(mfcc)
-        embeddings = self.model.m.predict(np.array(model_inputs))
+        embeddings = self.model.m.predict(np.array(model_inputs))  # type: ignore
         assert embeddings.shape[-1] == 512
         embeddings = np.reshape(embeddings, (len(selected_speakers), self.nb_per_speaker, 512))
         self.history_embeddings_train.extend(list(embeddings.reshape((-1, 512))))
@@ -161,7 +160,7 @@ class LazyTripletBatcher:
         return batch_x, batch_y
 
     def get_batch_train(self, batch_size):
-        from test import batch_cosine_similarity
+        from dailytalk.deepspeaker.test import batch_cosine_similarity
         # s1 = time()
         self.batch_count += 1
         if self.batch_count % self.history_every == 0:
@@ -176,39 +175,39 @@ class LazyTripletBatcher:
         # could be made parallel.
         for anchor_index in anchor_indexes:
             # s21 = time()
-            anchor_embedding = self.history_embeddings[anchor_index]
-            anchor_speaker = extract_speaker(self.history_utterances[anchor_index])
+            anchor_embedding = self.history_embeddings[anchor_index]  # type: ignore
+            anchor_speaker = extract_speaker(self.history_utterances[anchor_index])  # type: ignore
 
             # why self.nb_speakers // 2? just random. because it is fast. otherwise it's too much.
-            negative_indexes = [j for (j, a) in enumerate(self.history_utterances)
+            negative_indexes = [j for (j, a) in enumerate(self.history_utterances)  # type: ignore
                                 if extract_speaker(a) != anchor_speaker]
             negative_indexes = np.random.choice(negative_indexes, size=self.nb_speakers // 2)
 
             # s22 = time()
 
             anchor_embedding_tile = [anchor_embedding] * len(negative_indexes)
-            anchor_cos = batch_cosine_similarity(anchor_embedding_tile, self.history_embeddings[negative_indexes])
+            anchor_cos = batch_cosine_similarity(anchor_embedding_tile, self.history_embeddings[negative_indexes])  # type: ignore
 
             # s23 = time()
             similar_negative_index = negative_indexes[np.argsort(anchor_cos)[-1]]  # [-1:]
             similar_negative_indexes.append(similar_negative_index)
 
             # s24 = time()
-            positive_indexes = [j for (j, a) in enumerate(self.history_utterances) if
+            positive_indexes = [j for (j, a) in enumerate(self.history_utterances) if  # type: ignore
                                 extract_speaker(a) == anchor_speaker and j != anchor_index]
             # s25 = time()
             anchor_embedding_tile = [anchor_embedding] * len(positive_indexes)
             # s26 = time()
-            anchor_cos = batch_cosine_similarity(anchor_embedding_tile, self.history_embeddings[positive_indexes])
+            anchor_cos = batch_cosine_similarity(anchor_embedding_tile, self.history_embeddings[positive_indexes])  # type: ignore
             dissimilar_positive_index = positive_indexes[np.argsort(anchor_cos)[0]]  # [:1]
             dissimilar_positive_indexes.append(dissimilar_positive_index)
             # s27 = time()
 
         # s3 = time()
         batch_x = np.vstack([
-            self.history_model_inputs[anchor_indexes],
-            self.history_model_inputs[dissimilar_positive_indexes],
-            self.history_model_inputs[similar_negative_indexes]
+            self.history_model_inputs[anchor_indexes],  # type: ignore
+            self.history_model_inputs[dissimilar_positive_indexes],  # type: ignore
+            self.history_model_inputs[similar_negative_indexes]  # type: ignore
         ])
 
         # s4 = time()
@@ -222,14 +221,14 @@ class LazyTripletBatcher:
         # print('_' * 80)
 
         # assert utterances as well positive != anchor.
-        anchor_speakers = [extract_speaker(a) for a in self.history_utterances[anchor_indexes]]
-        positive_speakers = [extract_speaker(a) for a in self.history_utterances[dissimilar_positive_indexes]]
-        negative_speakers = [extract_speaker(a) for a in self.history_utterances[similar_negative_indexes]]
+        anchor_speakers = [extract_speaker(a) for a in self.history_utterances[anchor_indexes]]  # type: ignore
+        positive_speakers = [extract_speaker(a) for a in self.history_utterances[dissimilar_positive_indexes]]  # type: ignore
+        negative_speakers = [extract_speaker(a) for a in self.history_utterances[similar_negative_indexes]]  # type: ignore
 
         assert len(anchor_indexes) == len(dissimilar_positive_indexes)
         assert len(similar_negative_indexes) == len(dissimilar_positive_indexes)
-        assert list(self.history_utterances[dissimilar_positive_indexes]) != list(
-            self.history_utterances[anchor_indexes])
+        assert list(self.history_utterances[dissimilar_positive_indexes]) != list(  # type: ignore
+            self.history_utterances[anchor_indexes])  # type: ignore
         assert anchor_speakers == positive_speakers
         assert negative_speakers != anchor_speakers
 
@@ -306,8 +305,8 @@ class TripletBatcher:
         # check.
         # print(sorted(sum([v for v in self.train_indices_per_speaker.values()], [])))
         # print(range(len(ky_train)))
-        assert sorted(sum([v for v in self.train_indices_per_speaker.values()], [])) == sorted(range(len(ky_train)))
-        assert sorted(sum([v for v in self.test_indices_per_speaker.values()], [])) == sorted(range(len(ky_test)))
+        assert sorted(sum(list(self.train_indices_per_speaker.values()), [])) == sorted(range(len(ky_train)))
+        assert sorted(sum(list(self.test_indices_per_speaker.values()), [])) == sorted(range(len(ky_test)))
         self.speakers_list = speakers_list
 
     def select_speaker_data(self, speaker, n, is_test):
@@ -346,9 +345,9 @@ class TripletBatcherMiner(TripletBatcher):
             return super().get_batch(batch_size, is_test)
         max_loss = 0
         max_batch = None, None
-        for i in range(self.num_evaluations_to_find_best_batch):
+        for _i in range(self.num_evaluations_to_find_best_batch):
             bx, by = super().get_batch(batch_size, is_test=False)  # only train here.
-            loss = self.model.m.evaluate(bx, by, batch_size=batch_size, verbose=0)
+            loss = self.model.m.evaluate(bx, by, batch_size=batch_size, verbose=0)  # type: ignore
             if loss > max_loss:
                 max_loss = loss
                 max_batch = bx, by
@@ -363,15 +362,15 @@ class TripletBatcherSelectHardNegatives(TripletBatcher):
 
     def get_batch(self, batch_size, is_test=False, predict=None):
         if predict is None:
-            predict = self.model.m.predict
-        from test import batch_cosine_similarity
+            predict = self.model.m.predict  # type: ignore
+        from dailytalk.deepspeaker.test import batch_cosine_similarity
         num_triplets = batch_size // 3
         inputs = []
         k = 2  # do not change this.
         for speaker in self.speakers_list:
             inputs.append(self.select_speaker_data(speaker, n=k, is_test=is_test))
         inputs = np.array(inputs)  # num_speakers * [k, num_frames, num_fbanks, 1].
-        embeddings = predict(np.vstack(inputs))
+        embeddings = predict(np.vstack(inputs))  # type: ignore
         assert embeddings.shape[-1] == 512
         # (speaker, utterance, 512)
         embeddings = np.reshape(embeddings, (len(self.speakers_list), k, 512))
@@ -412,7 +411,7 @@ class TripletEvaluator:
         self.test_indices_per_speaker = {}
         for speaker_id in speakers_list:
             self.test_indices_per_speaker[speaker_id] = list(np.where(ky_test.argmax(axis=1) == speaker_id)[0])
-        assert sorted(sum([v for v in self.test_indices_per_speaker.values()], [])) == sorted(range(len(ky_test)))
+        assert sorted(sum(list(self.test_indices_per_speaker.values()), [])) == sorted(range(len(ky_test)))
         self.speakers_list = speakers_list
 
     def _select_speaker_data(self, speaker):

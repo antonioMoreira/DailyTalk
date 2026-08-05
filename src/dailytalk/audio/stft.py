@@ -5,7 +5,7 @@ from librosa.filters import mel as librosa_mel_fn
 from librosa.util import pad_center
 from scipy.signal import get_window
 
-from audio.audio_processing import (
+from dailytalk.audio.audio_processing import (
     dynamic_range_compression,
     dynamic_range_decompression,
     window_sumsquare,
@@ -66,7 +66,7 @@ class STFT(torch.nn.Module):
 
         device = input_data.device
         # pyrefly: ignore [no-matching-overload]
-        forward_transform = F.conv1d(
+        forward_transform = F.conv1d(  # type: ignore
             input_data,
             self.forward_basis.to(device),
             stride=self.hop_length,
@@ -90,7 +90,7 @@ class STFT(torch.nn.Module):
         device = recombine_magnitude_phase.device
         inverse_transform = F.conv_transpose1d(
             recombine_magnitude_phase,
-            torch.autograd.Variable(self.inverse_basis, requires_grad=False),
+            self.inverse_basis.to(device),  # type: ignore
             stride=self.hop_length,
             padding=0,
         )
@@ -176,7 +176,7 @@ class TacotronSTFT(torch.nn.Module):
 
         magnitudes, phases = self.stft_fn.transform(y)
         magnitudes = magnitudes.data
-        mel_output = torch.matmul(self.mel_basis, magnitudes)
+        mel_output = torch.matmul(self.mel_basis, magnitudes)  # type: ignore
         mel_output = self.spectral_normalize(mel_output)
         energy = torch.norm(magnitudes, dim=1)
 

@@ -7,7 +7,7 @@ import click
 import numpy as np
 import pandas as pd
 
-from deepspeaker.constants import TRAIN_TEST_RATIO
+from dailytalk.deepspeaker.constants import TRAIN_TEST_RATIO
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ def find_files(directory, ext='wav'):
 
 
 def init_pandas():
-    pd.set_option('display.float_format', lambda x: '%.3f' % x)
+    pd.set_option('display.float_format', lambda x: f'{x:.3f}')
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', 1000)

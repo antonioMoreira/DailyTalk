@@ -8,8 +8,8 @@ import numpy as np
 from python_speech_features import fbank
 from tqdm import tqdm
 
-from deepspeaker.constants import NUM_FBANKS, SAMPLE_RATE
-from deepspeaker.utils import ensures_dir, find_files
+from dailytalk.deepspeaker.constants import NUM_FBANKS, SAMPLE_RATE
+from dailytalk.deepspeaker.utils import ensures_dir, find_files
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def calculate_nfft(samplerate, winlen): # See https://github.com/jameslyons/python_speech_features/pull/76/commits/9ab32879b1fb31a38c1a70392fd21370b8fdc30f
     """Calculates the FFT size as a power of two greater than or equal to
     the number of samples in a single window length.
-    
+
     Having an FFT less than the window length loses precision by dropping
     many of the samples; a longer FFT than the window allows zero-padding
     of the FFT buffer which is neutral in terms of frequency domain conversion.
@@ -55,7 +55,7 @@ def extract_speaker_and_utterance_ids(filename: str):  # LIBRI.
 
 class Audio:
 
-    def __init__(self, cache_dir: str, audio_dir: str = None, sample_rate: int = SAMPLE_RATE, ext='flac'):
+    def __init__(self, cache_dir: str, audio_dir: str | None = None, sample_rate: int = SAMPLE_RATE, ext='flac'):
         self.ext = ext
         self.cache_dir = os.path.join(cache_dir, 'audio-fbanks')
         ensures_dir(self.cache_dir)
@@ -74,9 +74,9 @@ class Audio:
     @staticmethod
     def trim_silence(audio, threshold):
         """Removes silence at the beginning and end of a sample."""
-        energy = librosa.feature.rms(audio)
+        energy = librosa.feature.rms(y=audio)
         frames = np.nonzero(np.array(energy > threshold))
-        indices = librosa.core.frames_to_samples(frames)[1]
+        indices = librosa.core.frames_to_samples(frames)[1]  # type: ignore
 
         # Note: indices can be an empty array, if the whole audio was silence.
         audio_trim = audio[0:0]
@@ -111,7 +111,9 @@ class Audio:
         cache_filename = os.path.join(self.cache_dir, f'{sp}_{utt}.npy')
         if not os.path.isfile(cache_filename):
             try:
-                mfcc = read_mfcc(input_filename, sample_rate)
+                audio = Audio.read(input_filename, sample_rate)
+                from dailytalk.deepspeaker.constants import WIN_LENGTH
+                mfcc = read_mfcc(audio, sample_rate, WIN_LENGTH)
                 np.save(cache_filename, mfcc)
             except librosa.util.exceptions.ParameterError as e:
                 logger.error(e)
@@ -123,7 +125,7 @@ def pad_mfcc(mfcc, max_length):  # num_frames, nfilt=64.
     return mfcc
 
 
-def mfcc_fbank(signal: np.array, sample_rate: int, nfft):  # 1D signal array.
+def mfcc_fbank(signal: np.ndarray, sample_rate: int, nfft):  # 1D signal array.
     # Returns MFCC with shape (num_frames, n_filters, 3).
     filter_banks, energies = fbank(signal, samplerate=sample_rate, nfilt=NUM_FBANKS, nfft=nfft)
     frames_features = normalize_frames(filter_banks)

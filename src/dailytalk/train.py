@@ -13,7 +13,7 @@ try:
             return None
 
         # pyrefly: ignore [missing-attribute]
-        six._SixMetaPathImporter.find_spec = find_spec
+        six._SixMetaPathImporter.find_spec = find_spec  # type: ignore
 except Exception:
     pass
 
@@ -22,18 +22,17 @@ import os
 
 import torch
 import torch.multiprocessing as mp
-from torch.cuda import amp
 from torch.distributed import init_process_group
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from dataset import Dataset
-from evaluate import evaluate
-from model import CompTransTTSLoss
-from utils.model import get_model, get_param_num, get_vocoder
-from utils.tools import (
+from dailytalk.dataset import Dataset
+from dailytalk.evaluate import evaluate
+from dailytalk.model import CompTransTTSLoss
+from dailytalk.utils.model import get_model, get_param_num, get_vocoder
+from dailytalk.utils.tools import (
     get_configs_of,
     get_variance_level,
     log,
@@ -117,15 +116,15 @@ def train(rank, args, configs, batch_size, num_gpus):
     while train:
         if rank == 0:
             inner_bar = tqdm(total=len(loader), desc=f"Epoch {epoch}", position=1)
-        if num_gpus > 1:
+        if data_sampler is not None:
             data_sampler.set_epoch(epoch)
         for batchs in loader:
-            if train == False:
+            if not train:
                 break
             for batch in batchs:
                 batch = to_device(batch, device)
 
-                with amp.autocast(args.use_amp):
+                with torch.amp.autocast("cuda", enabled=args.use_amp):
                     # Forward
                     output = model(*(batch[2:]), step=step)
                     batch[9:11], output = (

@@ -14,9 +14,9 @@ from sentence_transformers import SentenceTransformer
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-import audio as Audio
-from text import grapheme_to_phoneme
-from utils.tools import get_phoneme_level_energy, get_phoneme_level_pitch
+from dailytalk import audio as Audio
+from dailytalk.text import grapheme_to_phoneme
+from dailytalk.utils.tools import get_phoneme_level_energy, get_phoneme_level_pitch
 
 
 class Preprocessor:
@@ -108,10 +108,10 @@ class Preprocessor:
         print("Processing Data ...")
         filtered_out_dialog_frame = set()
         filtered_out_dialog_phone = set()
-        train_frame = list()
-        val_frame = list()
-        train_phone = list()
-        val_phone = list()
+        train_frame = []
+        val_frame = []
+        train_phone = []
+        val_phone = []
         n_frames = 0
         max_seq_len = -float('inf')
         pitch_frame_scaler = StandardScaler()
@@ -233,14 +233,14 @@ class Preprocessor:
         #     f.write(json.dumps(speakers))
 
         if len(self.speakers) != 0:
-            speaker_dict = dict()
+            speaker_dict = {}
             for i, speaker in enumerate(list(self.speakers)):
                 speaker_dict[speaker] = int(speaker)
             with open(os.path.join(self.out_dir, "speakers.json"), "w") as f:
                 f.write(json.dumps(speaker_dict))
 
         if len(self.emotions) != 0:
-            emotion_dict = dict()
+            emotion_dict = {}
             for i, emotion in enumerate(list(self.emotions)):
                 emotion_dict[emotion] = i
             with open(os.path.join(self.out_dir, "emotions.json"), "w") as f:
@@ -334,12 +334,12 @@ class Preprocessor:
         text_emb = self.text_embbeder.encode([raw_text])[0]
 
         # Compute fundamental frequency
-        pitch, t = pw.dio(
+        pitch, t = pw.dio(  # type: ignore
             wav.astype(np.float64),
             self.sampling_rate,
             frame_period=self.hop_length / self.sampling_rate * 1000,
         )
-        pitch = pw.stonemask(wav.astype(np.float64), pitch, t, self.sampling_rate)
+        pitch = pw.stonemask(wav.astype(np.float64), pitch, t, self.sampling_rate)  # type: ignore
         pitch = pitch[: duration]
         if np.sum(pitch != 0) <= 1:
             frame_out_exist = False
@@ -398,12 +398,12 @@ class Preprocessor:
                 ]
 
                 # Compute fundamental frequency
-                pitch, t = pw.dio(
+                pitch, t = pw.dio(  # type: ignore
                     wav.astype(np.float64),
                     self.sampling_rate,
                     frame_period=self.hop_length / self.sampling_rate * 1000,
                 )
-                pitch = pw.stonemask(wav.astype(np.float64), pitch, t, self.sampling_rate)
+                pitch = pw.stonemask(wav.astype(np.float64), pitch, t, self.sampling_rate)  # type: ignore
 
                 pitch = pitch[: sum(duration)]
                 if np.sum(pitch != 0) <= 1:

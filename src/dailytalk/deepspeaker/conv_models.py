@@ -103,7 +103,7 @@ def load_weights_from_h5(model, h5_path):
         blocks = [model.block1, model.block2, model.block3, model.block4]
         filters_list = [64, 128, 256, 512]
 
-        for stage_idx, (block, filters) in enumerate(zip(blocks, filters_list), start=1):
+        for stage_idx, (block, filters) in enumerate(zip(blocks, filters_list, strict=False), start=1):
             conv_name = f"conv{filters}-s"
             bn_name = f"{conv_name}_bn"
 

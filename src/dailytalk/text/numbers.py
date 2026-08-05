@@ -31,19 +31,19 @@ def _expand_dollars(m):
     if dollars and cents:
         dollar_unit = "dollar" if dollars == 1 else "dollars"
         cent_unit = "cent" if cents == 1 else "cents"
-        return "%s %s, %s %s" % (dollars, dollar_unit, cents, cent_unit)
+        return f"{dollars} {dollar_unit}, {cents} {cent_unit}"
     elif dollars:
         dollar_unit = "dollar" if dollars == 1 else "dollars"
-        return "%s %s" % (dollars, dollar_unit)
+        return f"{dollars} {dollar_unit}"
     elif cents:
         cent_unit = "cent" if cents == 1 else "cents"
-        return "%s %s" % (cents, cent_unit)
+        return f"{cents} {cent_unit}"
     else:
         return "zero dollars"
 
 
 def _expand_ordinal(m):
-    return _inflect.number_to_words(m.group(0))
+    return str(_inflect.number_to_words(m.group(0)))
 
 
 def _expand_number(m):
@@ -52,15 +52,15 @@ def _expand_number(m):
         if num == 2000:
             return "two thousand"
         elif num > 2000 and num < 2010:
-            return "two thousand " + _inflect.number_to_words(num % 100)
+            return "two thousand " + str(_inflect.number_to_words(str(num % 100)))
         elif num % 100 == 0:
-            return _inflect.number_to_words(num // 100) + " hundred"
+            return str(_inflect.number_to_words(str(num // 100))) + " hundred"
         else:
-            return _inflect.number_to_words(
-                num, andword="", zero="oh", group=2
-            ).replace(", ", " ")
+            return str(_inflect.number_to_words(
+                str(num), andword="", zero="oh", group=2
+            )).replace(", ", " ")
     else:
-        return _inflect.number_to_words(num, andword="")
+        return str(_inflect.number_to_words(str(num), andword=""))
 
 
 def normalize_numbers(text):

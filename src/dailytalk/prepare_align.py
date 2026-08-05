@@ -11,14 +11,14 @@ try:
                 return ModuleSpec(fullname, self, is_package=self.is_package(fullname))
             return None
 
-        six._SixMetaPathImporter.find_spec = find_spec
+        six._SixMetaPathImporter.find_spec = find_spec  # type: ignore
 except Exception:
     pass
 
 import argparse
 
-from preprocessor import dailytalk
-from utils.tools import get_configs_of
+from dailytalk.preprocessor import dailytalk
+from dailytalk.utils.tools import get_configs_of
 
 
 def main(config):

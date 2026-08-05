@@ -5,12 +5,11 @@ from operator import mul
 import torch
 from local_attention import LocalAttention
 from product_key_memory import PKM
+from dailytalk.text.symbols import symbols
 from torch import nn
 from torch.autograd.function import Function
 from torch.nn import functional as F
 from torch.utils.checkpoint import get_device_states, set_device_states
-
-from text.symbols import symbols
 
 from .blocks import (
     get_sinusoid_encoding_table,
@@ -38,10 +37,10 @@ def batched_index_select(values, indices):
 def process_inputs_chunk(fn, chunks=1, dim=0):
     def inner_fn(*args, **kwargs):
         keys, values, len_args = kwargs.keys(), kwargs.values(), len(args)
-        chunked_args = list(zip(*map(lambda x: x.chunk(chunks, dim=dim), list(args) + list(values))))
-        all_args = map(lambda x: (x[:len_args], dict(zip(keys, x[len_args:]))), chunked_args)
+        chunked_args = list(zip(*(x.chunk(chunks, dim=dim) for x in list(args) + list(values)), strict=False))
+        all_args = ((x[:len_args], dict(zip(keys, x[len_args:], strict=False))) for x in chunked_args)
         outputs = [fn(*c_args, **c_kwargs) for c_args, c_kwargs in all_args]
-        return tuple(map(lambda x: torch.cat(x, dim=dim), zip(*outputs)))
+        return tuple(torch.cat(x, dim=dim) for x in zip(*outputs, strict=False))
     return inner_fn
 
 
@@ -127,7 +126,7 @@ class TextEncoder(nn.Module):
         n_position = config["max_seq_len"] + 1
         n_src_vocab = len(symbols) + 1
         d_word_vec = config["transformer"]["encoder_hidden"]
-        n_layers = config["transformer"]["encoder_layer"]
+        config["transformer"]["encoder_layer"]
         depth = config["reformer"]["depth"]
         n_head = config["reformer"]["encoder_head"]
         d_head = (
@@ -135,8 +134,8 @@ class TextEncoder(nn.Module):
             // config["transformer"]["encoder_head"]
         )
         d_model = config["transformer"]["encoder_hidden"]
-        d_inner = config["transformer"]["conv_filter_size"]
-        kernel_size = config["transformer"]["conv_kernel_size"]
+        config["transformer"]["conv_filter_size"]
+        config["transformer"]["conv_kernel_size"]
         dropout = config["transformer"]["encoder_dropout"]
 
         self.max_seq_len = config["max_seq_len"]
@@ -194,7 +193,7 @@ class Decoder(nn.Module):
 
         n_position = config["max_seq_len"] + 1
         d_word_vec = config["transformer"]["decoder_hidden"]
-        n_layers = config["transformer"]["decoder_layer"]
+        config["transformer"]["decoder_layer"]
         depth = config["reformer"]["depth"]
         n_head = config["reformer"]["decoder_head"]
         d_head = (
@@ -202,8 +201,8 @@ class Decoder(nn.Module):
             // config["transformer"]["decoder_head"]
         )
         d_model = config["transformer"]["decoder_hidden"]
-        d_inner = config["transformer"]["conv_filter_size"]
-        kernel_size = config["transformer"]["conv_kernel_size"]
+        config["transformer"]["conv_filter_size"]
+        config["transformer"]["conv_kernel_size"]
         dropout = config["transformer"]["decoder_dropout"]
 
         self.max_seq_len = config["max_seq_len"]
@@ -230,7 +229,6 @@ class Decoder(nn.Module):
 
     def forward(self, enc_seq, mask):
 
-        dec_slf_attn_list = []
         batch_size, max_len = enc_seq.shape[0], enc_seq.shape[1]
 
         # -- Forward
@@ -414,7 +412,7 @@ class LSHAttention(nn.Module):
         undo_sort = undo_sort.detach()
 
         if exists(pos_emb):
-            qk = apply_rotary_pos_emb(qk, pos_emb)
+            qk = apply_rotary_pos_emb(qk, pos_emb)  # type: ignore
 
         st = (sticker % seqlen)
         sqk = batched_index_select(qk, st)
@@ -643,7 +641,7 @@ class LSHSelfAttention(nn.Module):
 
     def forward(self, x, keys = None, input_mask = None, input_attn_mask = None, context_mask = None, pos_emb = None, **kwargs):
         device, dtype = x.device, x.dtype
-        b, t, e, h, dh, m, l_h = *x.shape, self.heads, self.dim_head, self.num_mem_kv, self.n_local_attn_heads
+        b, t, e, h, _dh, m, l_h = *x.shape, self.heads, self.dim_head, self.num_mem_kv, self.n_local_attn_heads
 
         mem_kv = default(self.mem_kv, torch.empty(b, 0, e, dtype=dtype, device=device))
         mem = mem_kv.expand(b, m, -1)
@@ -739,7 +737,8 @@ class Deterministic(nn.Module):
             rng_devices = self.gpu_devices
 
         with torch.random.fork_rng(devices=rng_devices, enabled=True):
-            torch.set_rng_state(self.cpu_state)
+            if self.cpu_state is not None:
+                torch.set_rng_state(self.cpu_state)
             if self.cuda_in_fwd:
                 set_device_states(self.gpu_devices, self.gpu_states)
             return self.net(*args, **kwargs)
@@ -756,7 +755,11 @@ class ReversibleBlock(nn.Module):
         self.depth = depth
         self.send_signal = send_signal
 
-    def forward(self, x, f_args = {}, g_args = {}):
+    def forward(self, x, f_args = None, g_args = None):
+        if g_args is None:
+            g_args = {}
+        if f_args is None:
+            f_args = {}
         x1, x2 = torch.chunk(x, 2, dim=2)
         y1, y2 = None, None
 
@@ -770,7 +773,11 @@ class ReversibleBlock(nn.Module):
 
         return torch.cat([y1, y2], dim=2)
 
-    def backward_pass(self, y, dy, f_args = {}, g_args = {}):
+    def backward_pass(self, y, dy, f_args = None, g_args = None):
+        if g_args is None:
+            g_args = {}
+        if f_args is None:
+            f_args = {}
         y1, y2 = torch.chunk(y, 2, dim=2)
         del y
 
@@ -790,7 +797,7 @@ class ReversibleBlock(nn.Module):
             x2 = y2 - gy1
             del y2, gy1
 
-            dx1 = dy1 + y1.grad
+            dx1 = dy1 + y1.grad  # type: ignore
             del dy1
             y1.grad = None
 
@@ -837,7 +844,7 @@ class _ReversibleFunction(Function):
         return x
 
     @staticmethod
-    def backward(ctx, dy):
+    def backward(ctx, dy):  # type: ignore
         y = ctx.y
         kwargs = ctx.kwargs
         for block in ctx.blocks[::-1]:
@@ -860,14 +867,14 @@ class ReversibleSequence(nn.Module):
 
         if self.training and self.layer_dropout > 0:
             to_drop = torch.empty(len(self.blocks)).uniform_(0, 1) < self.layer_dropout
-            blocks = [block for block, drop in zip(self.blocks, to_drop) if not drop]
+            blocks = [block for block, drop in zip(self.blocks, to_drop, strict=False) if not drop]
             blocks = self.blocks[:1] if len(blocks) == 0 else blocks
 
-        f_args, g_args = map(lambda route: kwargs if route else {}, arg_route)
+        f_args, g_args = (kwargs if route else {} for route in arg_route)
         block_kwargs = {'f_args': f_args, 'g_args': g_args}
 
         if not reverse:
-            for block in blocks:
+            for block in blocks:  # type: ignore
                 x = block(x, **block_kwargs)
             return x
 
@@ -897,7 +904,7 @@ class Autopadder(nn.Module):
         self.full_attn_thres = reformer.full_attn_thres
 
     def forward(self, x, **kwargs):
-        b, t, m, device = *x.shape[:2], self.num_mem_kv, x.device
+        b, t, m, _device = *x.shape[:2], self.num_mem_kv, x.device
 
         keys = kwargs.get('keys')
         input_mask = kwargs.get('input_mask')
@@ -926,7 +933,7 @@ class Autopadder(nn.Module):
 
 
 class Reformer(nn.Module):
-    def __init__(self, dim, depth, heads = 8, dim_head = None, bucket_size = 64, n_hashes = 8, ff_chunks = 100, attn_chunks = None, causal = False, weight_tie = False, lsh_dropout = 0., ff_dropout = 0., ff_activation = None, ff_mult = 4, ff_glu = False, post_attn_dropout = 0., layer_dropout = 0., lsh_attend_across_buckets = True, lsh_allow_duplicate_attention = True, random_rotations_per_head = False, use_scale_norm = False, use_rezero = False, use_full_attn = False, full_attn_thres = 0, reverse_thres = 0, num_mem_kv = 0, one_value_head = False, n_local_attn_heads = 0, pkm_layers = tuple(), pkm_num_keys = 128):
+    def __init__(self, dim, depth, heads = 8, dim_head = None, bucket_size = 64, n_hashes = 8, ff_chunks = 100, attn_chunks = None, causal = False, weight_tie = False, lsh_dropout = 0., ff_dropout = 0., ff_activation = None, ff_mult = 4, ff_glu = False, post_attn_dropout = 0., layer_dropout = 0., lsh_attend_across_buckets = True, lsh_allow_duplicate_attention = True, random_rotations_per_head = False, use_scale_norm = False, use_rezero = False, use_full_attn = False, full_attn_thres = 0, reverse_thres = 0, num_mem_kv = 0, one_value_head = False, n_local_attn_heads = 0, pkm_layers = (), pkm_num_keys = 128):
         super().__init__()
         self.dim = dim
         self.depth = depth
@@ -956,10 +963,7 @@ class Reformer(nn.Module):
 
             attn = get_attn()
 
-            if use_pkm:
-                parallel_net = get_pkm()
-            else:
-                parallel_net = get_ff()
+            parallel_net = get_pkm() if use_pkm else get_ff()
 
             f = residual_fn_wrapper(attn)
             g = residual_fn_wrapper(parallel_net)

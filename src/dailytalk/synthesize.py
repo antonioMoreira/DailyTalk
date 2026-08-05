@@ -13,7 +13,7 @@ try:
             return None
 
         # pyrefly: ignore [missing-attribute]
-        six._SixMetaPathImporter.find_spec = find_spec
+        six._SixMetaPathImporter.find_spec = find_spec  # type: ignore
 except Exception:
     pass
 
@@ -28,10 +28,10 @@ import torch
 from g2p_en import G2p
 from torch.utils.data import DataLoader
 
-from dataset import TextDataset
-from text import text_to_sequence
-from utils.model import get_model, get_vocoder
-from utils.tools import get_configs_of, synth_samples, to_device
+from dailytalk.dataset import TextDataset
+from dailytalk.text import text_to_sequence
+from dailytalk.utils.model import get_model, get_vocoder
+from dailytalk.utils.tools import get_configs_of, synth_samples, to_device
 
 
 def read_lexicon(lex_path):

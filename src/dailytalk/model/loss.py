@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from text import sil_phonemes_ids
+from dailytalk.text import sil_phonemes_ids
 
 
 class CompTransTTSLoss(nn.Module):

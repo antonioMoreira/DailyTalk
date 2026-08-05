@@ -94,7 +94,7 @@ class ResBlock(torch.nn.Module):
         self.convs2.apply(init_weights)
 
     def forward(self, x):
-        for c1, c2 in zip(self.convs1, self.convs2):
+        for c1, c2 in zip(self.convs1, self.convs2, strict=False):
             xt = F.leaky_relu(x, LRELU_SLOPE)
             xt = c1(xt)
             xt = F.leaky_relu(xt, LRELU_SLOPE)
@@ -121,7 +121,7 @@ class Generator(torch.nn.Module):
         resblock = ResBlock
 
         self.ups = nn.ModuleList()
-        for i, (u, k) in enumerate(zip(h.upsample_rates, h.upsample_kernel_sizes)):
+        for i, (u, k) in enumerate(zip(h.upsample_rates, h.upsample_kernel_sizes, strict=False)):
             self.ups.append(
                 weight_norm(
                     ConvTranspose1d(
@@ -137,8 +137,8 @@ class Generator(torch.nn.Module):
         self.resblocks = nn.ModuleList()
         for i in range(len(self.ups)):
             ch = h.upsample_initial_channel // (2 ** (i + 1))
-            for j, (k, d) in enumerate(
-                zip(h.resblock_kernel_sizes, h.resblock_dilation_sizes)
+            for _j, (k, d) in enumerate(
+                zip(h.resblock_kernel_sizes, h.resblock_dilation_sizes, strict=False)
             ):
                 self.resblocks.append(resblock(h, ch, k, d))
 
@@ -157,7 +157,7 @@ class Generator(torch.nn.Module):
                     xs = self.resblocks[i * self.num_kernels + j](x)
                 else:
                     xs += self.resblocks[i * self.num_kernels + j](x)
-            x = xs / self.num_kernels
+            x = xs / self.num_kernels  # type: ignore
         x = F.leaky_relu(x)
         x = self.conv_post(x)
         x = torch.tanh(x)
@@ -169,6 +169,6 @@ class Generator(torch.nn.Module):
         for l in self.ups:
             remove_weight_norm(l)
         for l in self.resblocks:
-            l.remove_weight_norm()
+            l.remove_weight_norm()  # type: ignore
         remove_weight_norm(self.conv_pre)
         remove_weight_norm(self.conv_post)

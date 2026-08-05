@@ -2,8 +2,7 @@ import json
 import os
 
 import torch.nn as nn
-
-from utils.tools import get_mask_from_lengths
+from dailytalk.utils.tools import get_mask_from_lengths
 
 from .modules import ConversationalContextEncoder, PostNet, VarianceAdaptor
 
@@ -69,9 +68,8 @@ class CompTransTTS(nn.Module):
             )
         self.history_type = model_config["history_encoder"]["type"]
 
-        if self.history_type != "none":
-            if self.history_type == "Guo":
-                self.context_encoder = ConversationalContextEncoder(preprocess_config, model_config)
+        if self.history_type != "none" and self.history_type == "Guo":
+            self.context_encoder = ConversationalContextEncoder(preprocess_config, model_config)
 
     def forward(
         self,
@@ -105,22 +103,21 @@ class CompTransTTS(nn.Module):
 
         # Context Encoding
         context_encodings = None
-        if self.history_type != "none":
-            if self.history_type == "Guo":
-                (
-                    text_embs,
-                    history_lens,
-                    history_text_embs,
-                    history_speakers,
-                ) = history_info
+        if self.history_type != "none" and self.history_type == "Guo" and history_info is not None:
+            (
+                text_embs,
+                history_lens,
+                history_text_embs,
+                history_speakers,
+            ) = history_info
 
-                context_encodings = self.context_encoder(
-                    text_embs,
-                    speakers,
-                    history_text_embs,
-                    history_speakers,
-                    history_lens,
-                )
+            context_encodings = self.context_encoder(
+                text_embs,
+                speakers,
+                history_text_embs,
+                history_speakers,
+                history_lens,
+            )
 
         speaker_embeds = None
         if self.speaker_emb is not None:

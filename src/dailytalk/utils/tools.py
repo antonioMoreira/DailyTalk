@@ -13,7 +13,7 @@ try:
             return None
 
         # pyrefly: ignore [missing-attribute]
-        six._SixMetaPathImporter.find_spec = find_spec
+        six._SixMetaPathImporter.find_spec = find_spec  # type: ignore
 except Exception:
     pass
 
@@ -34,16 +34,20 @@ from sklearn.manifold import TSNE
 
 
 def get_configs_of(dataset):
+    from dailytalk.config_models import ModelConfig, PreprocessConfig, TrainConfig
     config_dir = os.path.join("./config", dataset)
-    preprocess_config = yaml.load(
-        open(os.path.join(config_dir, "preprocess.yaml")), Loader=yaml.FullLoader
-    )
-    model_config = yaml.load(
-        open(os.path.join(config_dir, "model.yaml")), Loader=yaml.FullLoader
-    )
-    train_config = yaml.load(
-        open(os.path.join(config_dir, "train.yaml")), Loader=yaml.FullLoader
-    )
+
+    with open(os.path.join(config_dir, "preprocess.yaml")) as f:
+        preprocess_raw = yaml.load(f, Loader=yaml.FullLoader)
+    with open(os.path.join(config_dir, "model.yaml")) as f:
+        model_raw = yaml.load(f, Loader=yaml.FullLoader)
+    with open(os.path.join(config_dir, "train.yaml")) as f:
+        train_raw = yaml.load(f, Loader=yaml.FullLoader)
+
+    preprocess_config = PreprocessConfig(**preprocess_raw)
+    model_config = ModelConfig(**model_raw)
+    train_config = TrainConfig(**train_raw)
+
     return preprocess_config, model_config, train_config
 
 
@@ -149,28 +153,27 @@ def to_device(data, device):
             spker_embeds = torch.from_numpy(spker_embeds).float().to(device)
         if emotions is not None:
             emotions = torch.from_numpy(emotions).long().to(device)
-        if history_info is not None:
-            if len(history_info) == 4:  # "Guo"
-                (
-                    text_embs,
-                    history_lens,
-                    history_text_embs,
-                    history_speakers,
-                ) = history_info
+        if history_info is not None and len(history_info) == 4:  # "Guo"
+            (
+                text_embs,
+                history_lens,
+                history_text_embs,
+                history_speakers,
+            ) = history_info
 
-                text_embs = torch.from_numpy(text_embs).float().to(device)
-                history_lens = torch.from_numpy(history_lens).to(device)
-                history_text_embs = (
-                    torch.from_numpy(history_text_embs).float().to(device)
-                )
-                history_speakers = torch.from_numpy(history_speakers).long().to(device)
+            text_embs = torch.from_numpy(text_embs).float().to(device)
+            history_lens = torch.from_numpy(history_lens).to(device)
+            history_text_embs = (
+                torch.from_numpy(history_text_embs).float().to(device)
+            )
+            history_speakers = torch.from_numpy(history_speakers).long().to(device)
 
-                history_info = (
-                    text_embs,
-                    history_lens,
-                    history_text_embs,
-                    history_speakers,
-                )
+            history_info = (
+                text_embs,
+                history_lens,
+                history_text_embs,
+                history_speakers,
+            )
 
         return [
             ids,
@@ -211,28 +214,27 @@ def to_device(data, device):
             spker_embeds = torch.from_numpy(spker_embeds).float().to(device)
         if emotions is not None:
             emotions = torch.from_numpy(emotions).long().to(device)
-        if history_info is not None:
-            if len(history_info) == 4:  # "Guo"
-                (
-                    text_embs,
-                    history_lens,
-                    history_text_embs,
-                    history_speakers,
-                ) = history_info
+        if history_info is not None and len(history_info) == 4:  # "Guo"
+            (
+                text_embs,
+                history_lens,
+                history_text_embs,
+                history_speakers,
+            ) = history_info
 
-                text_embs = torch.from_numpy(text_embs).float().to(device)
-                history_lens = torch.from_numpy(history_lens).to(device)
-                history_text_embs = (
-                    torch.from_numpy(history_text_embs).float().to(device)
-                )
-                history_speakers = torch.from_numpy(history_speakers).long().to(device)
+            text_embs = torch.from_numpy(text_embs).float().to(device)
+            history_lens = torch.from_numpy(history_lens).to(device)
+            history_text_embs = (
+                torch.from_numpy(history_text_embs).float().to(device)
+            )
+            history_speakers = torch.from_numpy(history_speakers).long().to(device)
 
-                history_info = (
-                    text_embs,
-                    history_lens,
-                    history_text_embs,
-                    history_speakers,
-                )
+            history_info = (
+                text_embs,
+                history_lens,
+                history_text_embs,
+                history_speakers,
+            )
 
         return (
             ids,
@@ -296,8 +298,8 @@ def get_mask_from_lengths(lengths, max_len=None):
 
 
 def expand(values, durations):
-    out = list()
-    for value, d in zip(values, durations):
+    out = []
+    for value, d in zip(values, durations, strict=False):
         out += [value] * max(0, int(d))
     return np.array(out)
 
@@ -317,7 +319,7 @@ def synth_one_sample(targets, predictions, vocoder, model_config, preprocess_con
 
     fig_attn = None
     if learn_alignment:
-        attn_prior, attn_soft, attn_hard, attn_hard_dur, attn_logprob = (
+        attn_prior, attn_soft, attn_hard, _attn_hard_dur, _attn_logprob = (
             targets[12],
             *predictions[10],
         )
@@ -396,7 +398,7 @@ def synth_samples(
     multi_emotion = model_config["multi_emotion"]
     history_type = model_config["history_encoder"]["type"]
     emotion_tag = ("_" + args.emotion_id) if multi_emotion else ""
-    learn_alignment = model_config["duration_modeling"]["learn_alignment"]
+    model_config["duration_modeling"]["learn_alignment"]
     pitch_level_tag, energy_level_tag, *_ = get_variance_level(
         preprocess_config, model_config
     )
@@ -407,7 +409,6 @@ def synth_samples(
         mel_len = predictions[9][i].item()
         mel_prediction = predictions[1][i, :mel_len].detach().transpose(0, 1)
         duration = predictions[5][i, :src_len].int().detach().cpu().numpy()
-        attn_soft = attn_hard = None
 
         if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":
             pitch = predictions[2][i, :src_len].detach().cpu().numpy()
@@ -452,7 +453,7 @@ def synth_samples(
                 basename.split("_")[-1].strip("d"),
                 f"{basename}.png",
             )
-        fig = plot_mel(
+        plot_mel(
             [
                 (mel_prediction.cpu().numpy(), pitch, energy),
             ],
@@ -470,7 +471,7 @@ def synth_samples(
     )
 
     sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
-    for wav, basename in zip(wav_predictions, basenames):
+    for wav, basename in zip(wav_predictions, basenames, strict=False):
         if history_type == "none":
             wav_save_dir = os.path.join(
                 path,
@@ -614,7 +615,7 @@ def plot_embedding(
     tsne_all_y_data = data_y
 
     plt.figure(figsize=(10, 10))
-    for i, (c, label) in enumerate(zip(colors, labels)):
+    for i, (c, label) in enumerate(zip(colors, labels, strict=False)):
         plt.scatter(
             tsne_all_data[tsne_all_y_data == i, 0],
             tsne_all_data[tsne_all_y_data == i, 1],
@@ -689,13 +690,10 @@ def pad_3D(inputs, B, T, L):
 
 
 def pad(input_ele, mel_max_length=None):
-    if mel_max_length:
-        max_len = mel_max_length
-    else:
-        max_len = max([input_ele[i].size(0) for i in range(len(input_ele))])
+    max_len = mel_max_length or max([input_ele[i].size(0) for i in range(len(input_ele))])
 
-    out_list = list()
-    for i, batch in enumerate(input_ele):
+    out_list = []
+    for _i, batch in enumerate(input_ele):
         if len(batch.shape) == 1:
             one_batch_padded = F.pad(
                 batch, (0, max_len - batch.size(0)), "constant", 0.0

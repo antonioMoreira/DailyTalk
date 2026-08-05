@@ -13,7 +13,7 @@ try:
             return None
 
         # pyrefly: ignore [missing-attribute]
-        six._SixMetaPathImporter.find_spec = find_spec
+        six._SixMetaPathImporter.find_spec = find_spec  # type: ignore
 except Exception:
     pass
 
@@ -21,9 +21,9 @@ except Exception:
 import torch
 from torch.utils.data import DataLoader
 
-from dataset import Dataset
-from model import CompTransTTSLoss
-from utils.tools import get_variance_level, log, synth_one_sample, to_device
+from dailytalk.dataset import Dataset
+from dailytalk.model import CompTransTTSLoss
+from dailytalk.utils.tools import get_variance_level, log, synth_one_sample, to_device
 
 
 def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=None):
@@ -52,7 +52,7 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=Non
 
     # Evaluation
     loss_sums = [
-        dict.fromkeys(loss.keys(), 0) if isinstance(loss, dict) else 0 for loss in losses
+        dict.fromkeys(loss.keys(), 0) if isinstance(loss, dict) else 0 for loss in losses  # type: ignore
     ]
     for batchs in loader:
         for batch in batchs:
@@ -70,7 +70,7 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=Non
 
                 for i in range(len(losses)):
                     if isinstance(losses[i], dict):
-                        for k in loss_sums[i].keys():
+                        for k in loss_sums[i]:  # type: ignore
                             loss_sums[i][k] += losses[i][k].item() * len(batch[0])
                     else:
                         loss_sums[i] += losses[i].item() * len(batch[0])
@@ -87,7 +87,7 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, losses=Non
             loss_means_.append(loss_sum / len(dataset))
 
     message = "Validation Step {}, Total Loss: {:.4f}, Mel Loss: {:.4f}, Mel PostNet Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}, CTC Loss: {:.4f}, Binarization Loss: {:.4f}".format(
-        *([step] + [l for l in loss_means_])
+        *([step] + list(loss_means_))
     )
 
     if logger is not None:
