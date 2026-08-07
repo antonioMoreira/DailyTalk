@@ -17,7 +17,6 @@ try:
 except Exception:
     pass
 
-import argparse
 import json
 import os
 import re
@@ -25,9 +24,11 @@ from string import punctuation
 
 import numpy as np
 import torch
+import typer
 from g2p_en import G2p
 from torch.utils.data import DataLoader
 
+from dailytalk.cli_models import SynthesizeArgs
 from dailytalk.dataset import TextDataset
 from dailytalk.text import text_to_sequence
 from dailytalk.utils.model import get_model, get_vocoder
@@ -73,7 +74,7 @@ def preprocess_english(text, preprocess_config):
     return np.array(sequence)
 
 
-def synthesize(device, model, args, configs, vocoder, batchs, control_values):
+def synthesize(device, model, args: SynthesizeArgs, configs, vocoder, batchs, control_values):
     preprocess_config, model_config, train_config = configs
     pitch_control, energy_control, duration_control = control_values
 
@@ -101,65 +102,36 @@ def synthesize(device, model, args, configs, vocoder, batchs, control_values):
             )
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--restore_step", type=int, required=True)
-    parser.add_argument(
-        "--mode",
-        type=str,
-        choices=["batch", "single"],
-        required=True,
-        help="Synthesize a whole dataset or a single sentence",
+app = typer.Typer(help="Synthesize speech with DailyTalk.")
+
+
+@app.command()
+def main(
+    restore_step: int = typer.Option(..., "--restore_step", help="Step number of checkpoint to restore"),
+    mode: str = typer.Option(..., "--mode", help="Synthesize a whole dataset ('batch') or a single sentence ('single')"),
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Name of dataset"),
+    source: str | None = typer.Option(None, "--source", help="Path to source file for batch mode"),
+    text: str | None = typer.Option(None, "--text", help="Raw text to synthesize for single mode"),
+    speaker_id: str = typer.Option("p225", "--speaker_id", help="Speaker ID for single mode"),
+    emotion_id: str = typer.Option("happiness", "--emotion_id", help="Emotion ID for single mode"),
+    pitch_control: float = typer.Option(1.0, "--pitch_control", help="Control pitch of utterance"),
+    energy_control: float = typer.Option(1.0, "--energy_control", help="Control energy of utterance"),
+    duration_control: float = typer.Option(1.0, "--duration_control", help="Control speaking rate speed"),
+):
+    if mode not in ("batch", "single"):
+        raise typer.BadParameter("mode must be 'batch' or 'single'")
+    args = SynthesizeArgs(
+        restore_step=restore_step,
+        mode=mode,  # type: ignore
+        dataset=dataset,
+        source=source,
+        text=text,
+        speaker_id=speaker_id,
+        emotion_id=emotion_id,
+        pitch_control=pitch_control,
+        energy_control=energy_control,
+        duration_control=duration_control,
     )
-    parser.add_argument(
-        "--source",
-        type=str,
-        default=None,
-        help="path to a source file with format like train.txt and val.txt, for batch mode only",
-    )
-    parser.add_argument(
-        "--text",
-        type=str,
-        default=None,
-        help="raw text to synthesize, for single-sentence mode only",
-    )
-    parser.add_argument(
-        "--speaker_id",
-        type=str,
-        default="p225",
-        help="speaker ID for multi-speaker synthesis, for single-sentence mode only",
-    )
-    parser.add_argument(
-        "--emotion_id",
-        type=str,
-        default="happiness",
-        help="emotion ID for multi-emotion synthesis, for single-sentence mode only",
-    )
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True,
-        help="name of dataset",
-    )
-    parser.add_argument(
-        "--pitch_control",
-        type=float,
-        default=1.0,
-        help="control the pitch of the whole utterance, larger value for higher pitch",
-    )
-    parser.add_argument(
-        "--energy_control",
-        type=float,
-        default=1.0,
-        help="control the energy of the whole utterance, larger value for larger volume",
-    )
-    parser.add_argument(
-        "--duration_control",
-        type=float,
-        default=1.0,
-        help="control the speed of the whole utterance, larger value for slower speaking rate",
-    )
-    args = parser.parse_args()
 
     # Check source texts
     if args.mode == "batch":
@@ -193,17 +165,17 @@ if __name__ == "__main__":
     # Preprocess texts
     if args.mode == "batch":
         # Get dataset
-        dataset = TextDataset(args.source, preprocess_config, model_config)
+        text_dataset = TextDataset(args.source, preprocess_config, model_config)
         batchs = DataLoader(
-            dataset,
+            text_dataset,
             batch_size=8,
-            collate_fn=dataset.collate_fn,
+            collate_fn=text_dataset.collate_fn,
         )
     if args.mode == "single":
         assert model_config["history_encoder"]["type"] == "none", (
             "Single inference is not supported for conversational TTS, currently"
         )
-        ids = raw_texts = [args.text[:100]]
+        ids = raw_texts = [args.text[:100]]  # type: ignore
 
         # Speaker Info
         load_spker_embed = (
@@ -265,3 +237,7 @@ if __name__ == "__main__":
     control_values = args.pitch_control, args.energy_control, args.duration_control
 
     synthesize(device, model, args, configs, vocoder, batchs, control_values)
+
+
+if __name__ == "__main__":
+    app()

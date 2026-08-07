@@ -2,6 +2,7 @@ import json
 import os
 
 import torch.nn as nn
+
 from dailytalk.utils.tools import get_mask_from_lengths
 
 from .modules import ConversationalContextEncoder, PostNet, VarianceAdaptor

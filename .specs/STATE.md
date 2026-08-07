@@ -28,11 +28,16 @@
 
 ## Handoff
 
-- **Feature**: Modernization to Python 3.14 and test generation
-- **Phase / Task**: Phase 1: Specify Feature
-- **Completed**: none
-- **In-progress**: Creating .specs/features/modernization/spec.md
-- **Next step**: Complete spec.md and present the specification to the user.
+- **Feature**: Step 1 - Language-Driven Text Frontend & Phonemization (`step_1_text_frontend`)
+- **Phase / Task**: Phase 4: Execute & Verify
+- **Completed**:
+  - Defined `LanguageFrontend` protocol in `src/dailytalk/text/languages/base.py`.
+  - Built `EnglishFrontend` adapter wrapping Tacotron cleaners and ARPAbet/CMUDict (`src/dailytalk/text/languages/english.py`).
+  - Built `PortugueseFrontend` adapter with `num2words(lang="pt")` number expansion, Portuguese abbreviation expansion (`Sr.`, `Dr.`, `vc`), diacritic preservation (`á, ç, ã`), and SAMPA/IPA symbol mapping (`src/dailytalk/text/languages/portuguese.py`).
+  - Created `get_language_frontend(language)` factory in `src/dailytalk/text/frontend.py`.
+  - Added unit test suite in `tests/test_text_frontend.py`.
+- **In-progress**: none
+- **Next step**: Step 1 complete. Proceed to Step 2 (Audio Loading & Acoustic Feature Extraction) or user-selected next slice.
 - **Blockers**: none
-- **Uncommitted files**: .specs/STATE.md
+- **Uncommitted files**: none
 - **Branch**: main

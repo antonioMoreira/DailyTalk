@@ -4,9 +4,10 @@ from math import ceil, gcd
 import torch
 from einops import rearrange, repeat
 from rotary_embedding_torch import RotaryEmbedding, apply_rotary_emb
-from dailytalk.text.symbols import symbols
 from torch import einsum, nn
 from torch.nn import functional as F
+
+from dailytalk.text.symbols import symbols
 
 from .blocks import (
     get_sinusoid_encoding_table,

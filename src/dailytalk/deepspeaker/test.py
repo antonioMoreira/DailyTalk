@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def batch_cosine_similarity(x1, x2):
     # https://en.wikipedia.org/wiki/Cosine_similarity
     # 1 = equal direction ; -1 = opposite direction

@@ -2,9 +2,10 @@ import math
 
 import torch
 import torch.nn as nn
-from dailytalk.text.symbols import symbols
 from torch import Tensor
 from torch.nn import functional as F
+
+from dailytalk.text.symbols import symbols
 
 from .blocks import (
     GLU,

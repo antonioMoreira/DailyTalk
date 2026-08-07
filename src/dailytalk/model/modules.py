@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from numba import jit, prange
+
 from dailytalk.utils.tools import (
     get_mask_from_lengths,
     get_phoneme_level_energy,

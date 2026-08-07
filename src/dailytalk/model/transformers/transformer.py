@@ -1,8 +1,9 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from dailytalk.text.symbols import symbols
 from torch.nn import functional as F
+
+from dailytalk.text.symbols import symbols
 
 from .blocks import (
     LinearNorm,

@@ -1,34 +1,21 @@
-# Monkey-patch six to support PEP 451 under Python 3.14+
-try:
-    from importlib.machinery import ModuleSpec
+import typer
 
-    import six
-    # pyrefly: ignore [missing-attribute]
-    if not hasattr(six._SixMetaPathImporter, "find_spec"):
-        def find_spec(self, fullname, path, target=None):
-            if fullname in self.known_modules:
-                return ModuleSpec(fullname, self, is_package=self.is_package(fullname))
-            return None
-        # pyrefly: ignore [missing-attribute]
-        six._SixMetaPathImporter.find_spec = find_spec  # type: ignore
-except Exception:
-    pass
-
-import argparse
-
+from dailytalk.cli_models import PreprocessArgs
 from dailytalk.preprocessor.preprocessor import Preprocessor
 from dailytalk.utils.tools import get_configs_of
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True,
-        help="name of dataset",
-    )
-    args = parser.parse_args()
+app = typer.Typer(help="Preprocess dataset for DailyTalk.")
 
+
+@app.command()
+def main(
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Name of dataset"),
+):
+    args = PreprocessArgs(dataset=dataset)
     preprocess_config, model_config, train_config = get_configs_of(args.dataset)
     preprocessor = Preprocessor(preprocess_config, model_config, train_config)
     preprocessor.build_from_path()
+
+
+if __name__ == "__main__":
+    app()
