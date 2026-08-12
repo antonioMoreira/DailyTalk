@@ -9,6 +9,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  "av>=18.0.0",
   "einops>=0.8",
   "g2p-en>=2.1",
   "h5py>=3.11",

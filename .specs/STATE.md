@@ -28,16 +28,18 @@
 
 ## Handoff
 
-- **Feature**: Step 1 - Language-Driven Text Frontend & Phonemization (`step_1_text_frontend`)
+- **Feature**: Unified Preprocessing Pipeline (`unified_preprocessor_pipeline`)
 - **Phase / Task**: Phase 4: Execute & Verify
 - **Completed**:
-  - Defined `LanguageFrontend` protocol in `src/dailytalk/text/languages/base.py`.
-  - Built `EnglishFrontend` adapter wrapping Tacotron cleaners and ARPAbet/CMUDict (`src/dailytalk/text/languages/english.py`).
-  - Built `PortugueseFrontend` adapter with `num2words(lang="pt")` number expansion, Portuguese abbreviation expansion (`Sr.`, `Dr.`, `vc`), diacritic preservation (`á, ç, ã`), and SAMPA/IPA symbol mapping (`src/dailytalk/text/languages/portuguese.py`).
-  - Created `get_language_frontend(language)` factory in `src/dailytalk/text/frontend.py`.
-  - Added unit test suite in `tests/test_text_frontend.py`.
+  - Implemented `src/dailytalk/preprocessor/preparation_and_cleaning.py` (Stage 1 with PyAV audio resampling and volume normalization).
+  - Implemented `src/dailytalk/preprocessor/language_frontend.py` (Stage 2 with language-driven text cleaning & sequence mapping).
+  - Implemented `src/dailytalk/preprocessor/feature_extractor.py` (Stage 3 with Mel STFT, PyWorld Pitch F0, Energy C2, Durations, Sentence Transformers, and stats.json calculation).
+  - Implemented `src/dailytalk/preprocessor/speaker_embedder.py` (Stage 4 with DeepSpeaker 512-dim identity vector extraction).
+  - Implemented `src/dailytalk/preprocessor/pipeline.py` (`PreprocessorPipeline` orchestrator & `PipelineResult` Pydantic model).
+  - Updated `src/dailytalk/preprocess.py` CLI with `--stage` flag.
+  - Added unit test suite in `tests/test_preprocessor.py`.
 - **In-progress**: none
-- **Next step**: Step 1 complete. Proceed to Step 2 (Audio Loading & Acoustic Feature Extraction) or user-selected next slice.
+- **Next step**: Unified preprocessing pipeline complete. All 26 unit tests passing.
 - **Blockers**: none
 - **Uncommitted files**: none
 - **Branch**: main
