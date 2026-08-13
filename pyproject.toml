@@ -15,7 +15,7 @@ dependencies = [
   "h5py>=3.11",
   "inflect>=7",
   "librosa>=0.10.1",
-  "local-attention>=1.9"  ,
+  "local-attention>=1.9",
   "matplotlib>=3.9",
   "num2words>=0.5.14",
   "numba>=0.61",
@@ -49,6 +49,13 @@ dev = [
   "ty>=0.0.43",
   "types-tqdm>=4.67.3.20260518",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+link-mode = "copy"
 
 [tool.ruff]
 # Target Python version 3.14 to match project requires-python
