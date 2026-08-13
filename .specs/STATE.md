@@ -26,20 +26,24 @@
 - **Date**: 2026-07-22
 - **Status**: active
 
+### AD-004
+- **Decision**: Add full type annotations to `src/dailytalk/utils/tools.py` using Pydantic `BaseModel` config types (`PreprocessConfig`, `ModelConfig`, `TrainConfig`, `SynthesizeArgs`) and configure `.vscode/settings.json` for `ty` and `ruff`.
+- **Reason**: Eliminates `Unknown` type inference issues across modules including `preprocess.py` and provides strict static type safety.
+- **Scope**: `src/dailytalk/utils/tools.py`, `.vscode/settings.json`, and `tests/test_tools.py`.
+- **Date**: 2026-08-13
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: Unified Preprocessing Pipeline (`unified_preprocessor_pipeline`)
+- **Feature**: Type annotation to `tools.py` (`type-annotations-tools`)
 - **Phase / Task**: Phase 4: Execute & Verify
 - **Completed**:
-  - Implemented `src/dailytalk/preprocessor/preparation_and_cleaning.py` (Stage 1 with PyAV audio resampling and volume normalization).
-  - Implemented `src/dailytalk/preprocessor/language_frontend.py` (Stage 2 with language-driven text cleaning & sequence mapping).
-  - Implemented `src/dailytalk/preprocessor/feature_extractor.py` (Stage 3 with Mel STFT, PyWorld Pitch F0, Energy C2, Durations, Sentence Transformers, and stats.json calculation).
-  - Implemented `src/dailytalk/preprocessor/speaker_embedder.py` (Stage 4 with DeepSpeaker 512-dim identity vector extraction).
-  - Implemented `src/dailytalk/preprocessor/pipeline.py` (`PreprocessorPipeline` orchestrator & `PipelineResult` Pydantic model).
-  - Updated `src/dailytalk/preprocess.py` CLI with `--stage` flag.
-  - Added unit test suite in `tests/test_preprocessor.py`.
+  - Configured `.vscode/settings.json` for `ty` and `ruff` format-on-save.
+  - Type-annotated all functions in `src/dailytalk/utils/tools.py` using Pydantic `BaseModel` classes (`PreprocessConfig`, `ModelConfig`, `TrainConfig`, `SynthesizeArgs`).
+  - Added unit test suite in `tests/test_tools.py`.
+  - Verified `uv run ty check` (All checks passed!), `uv run ruff check` (All checks passed!), and `uv run pytest` (37/37 tests passed!).
 - **In-progress**: none
-- **Next step**: Unified preprocessing pipeline complete. All 26 unit tests passing.
+- **Next step**: Complete. All tests and static checks pass cleanly.
 - **Blockers**: none
 - **Uncommitted files**: none
 - **Branch**: main
