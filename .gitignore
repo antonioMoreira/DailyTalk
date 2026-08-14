@@ -117,6 +117,6 @@ output/
 inference/
 *.npy
 TextGrid/
-hifigan/*.pth.tar
+**/*.pth.tar
 *.out
 deepspeaker/pretrained_models/*

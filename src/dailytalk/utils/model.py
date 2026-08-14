@@ -17,7 +17,7 @@ def get_model(args, configs, device, train=False):
             train_config["path"]["ckpt_path"],
             f"{args.restore_step}.pth.tar",
         )
-        ckpt = torch.load(ckpt_path, map_location=device)
+        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model"])
 
     if train:
@@ -55,16 +55,21 @@ def get_vocoder(config, device):
         vocoder.mel2wav.eval()
         vocoder.mel2wav.to(device)
     elif name == "HiFi-GAN":
-        with open("hifigan/config.json") as f:
+        hifigan_dir = os.path.dirname(hifigan.__file__)
+        config_path = os.path.join(hifigan_dir, "config.json")
+        if not os.path.exists(config_path):
+            config_path = "hifigan/config.json"
+        with open(config_path) as f:
             config = json.load(f)
         config = hifigan.AttrDict(config)
         vocoder = hifigan.Generator(config)
-        if speaker == "LJSpeech":
-            ckpt = torch.load("hifigan/generator_LJSpeech.pth.tar", map_location=device)
-        elif speaker == "universal":
-            ckpt = torch.load(
-                "hifigan/generator_universal.pth.tar", map_location=device
-            )
+
+        ckpt_filename = f"generator_{speaker}.pth.tar"
+        ckpt_path = os.path.join(hifigan_dir, ckpt_filename)
+        if not os.path.exists(ckpt_path):
+            ckpt_path = os.path.join("hifigan", ckpt_filename)
+
+        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
         vocoder.load_state_dict(ckpt["generator"])
         vocoder.eval()
         vocoder.remove_weight_norm()
