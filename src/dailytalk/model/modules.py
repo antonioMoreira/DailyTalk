@@ -195,7 +195,9 @@ class VarianceAdaptor(nn.Module):
             assert pitch_quantization in ["linear", "log"]
             assert energy_quantization in ["linear", "log"]
             with open(
-                os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json")
+                os.path.join(
+                    preprocess_config.path.preprocessed_data_path, "stats.json"
+                )
             ) as f:
                 stats = json.load(f)
                 pitch_min, pitch_max = stats[f"pitch_{pitch_level_tag}"][:2]
@@ -757,7 +759,7 @@ class ConversationalContextEncoder(nn.Module):
         self.speaker_linear = nn.Linear(d_model, d_cont_enc)
         with open(
             os.path.join(
-                preprocess_config["path"]["preprocessed_path"], "speakers.json"
+                preprocess_config.path.preprocessed_data_path, "speakers.json"
             ),
         ) as f:
             n_speaker = len(json.load(f))

@@ -53,9 +53,9 @@ class PreprocessorPipeline:
 
     def run_stage_3_feature_extraction(self) -> PipelineResult:
         """Stage 3: Extract Mel, Pitch, Energy, Durations, Sentence Embeddings & calculate stats."""
-        out_dir = self.preprocess_config.path.preprocessed_path
+        out_dir = self.preprocess_config.path.preprocessed_data_path
         in_dir = os.path.join(
-            self.preprocess_config.path.raw_path,
+            self.preprocess_config.path.intermediate_data_path,
             self.preprocess_config.path.sub_dir_name,
         )
 
@@ -121,10 +121,10 @@ class PreprocessorPipeline:
             return 0
 
         in_dir = os.path.join(
-            self.preprocess_config.path.raw_path,
+            self.preprocess_config.path.intermediate_data_path,
             self.preprocess_config.path.sub_dir_name,
         )
-        out_dir = os.path.join(self.preprocess_config.path.preprocessed_path, "spker_embed")
+        out_dir = os.path.join(self.preprocess_config.path.preprocessed_data_path, "spker_embed")
         os.makedirs(out_dir, exist_ok=True)
 
         if not os.path.exists(in_dir):

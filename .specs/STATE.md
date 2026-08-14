@@ -33,14 +33,23 @@
 - **Date**: 2026-08-13
 - **Status**: active
 
+### AD-005
+- **Decision**: Rename path configuration variables across the codebase to disambiguate dataset pipeline stages: `corpus_path` ➔ `raw_corpus_path`, `raw_path` ➔ `intermediate_data_path`, and `preprocessed_path` ➔ `preprocessed_data_path`.
+- **Reason**: To eliminate semantic ambiguity between raw source datasets, workspace intermediate audio/label files, and model-ready feature tensors.
+- **Scope**: `config/DailyTalk/preprocess.yaml`, `src/dailytalk/config_models.py`, preprocessors, dataset, models, synthesis scripts, and tests.
+- **Date**: 2026-08-14
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: Type annotation to `tools.py` (`type-annotations-tools`)
+- **Feature**: Rename Path Variables for Disambiguation (`rename-path-variables`)
 - **Phase / Task**: Phase 4: Execute & Verify
 - **Completed**:
-  - Configured `.vscode/settings.json` for `ty` and `ruff` format-on-save.
-  - Type-annotated all functions in `src/dailytalk/utils/tools.py` using Pydantic `BaseModel` classes (`PreprocessConfig`, `ModelConfig`, `TrainConfig`, `SynthesizeArgs`).
-  - Added unit test suite in `tests/test_tools.py`.
+  - Updated Pydantic `PathConfig` model in `src/dailytalk/config_models.py`.
+  - Updated `config/DailyTalk/preprocess.yaml`.
+  - Updated preprocessor modules (`preparation_and_cleaning.py`, `pipeline.py`, `dailytalk.py`).
+  - Updated dataset, model, and synthesis modules (`dataset.py`, `tools.py`, `synthesize.py`, `CompTransTTS.py`, `modules.py`).
+  - Updated unit tests (`test_config.py`, `test_dataset.py`).
   - Verified `uv run ty check` (All checks passed!), `uv run ruff check` (All checks passed!), and `uv run pytest` (37/37 tests passed!).
 - **In-progress**: none
 - **Next step**: Complete. All tests and static checks pass cleanly.

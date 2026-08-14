@@ -43,7 +43,7 @@ class CompTransTTS(nn.Module):
             if self.embedder_type == "none":
                 with open(
                     os.path.join(
-                        preprocess_config["path"]["preprocessed_path"], "speakers.json"
+                        preprocess_config.path.preprocessed_data_path, "speakers.json"
                     ),
                 ) as f:
                     n_speaker = len(json.load(f))
@@ -59,7 +59,7 @@ class CompTransTTS(nn.Module):
         if model_config["multi_emotion"]:
             with open(
                 os.path.join(
-                    preprocess_config["path"]["preprocessed_path"], "emotions.json"
+                    preprocess_config.path.preprocessed_data_path, "emotions.json"
                 ),
             ) as f:
                 n_emotion = len(json.load(f))

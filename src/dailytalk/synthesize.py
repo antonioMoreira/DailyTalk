@@ -184,7 +184,7 @@ def main(
         )
         with open(
             os.path.join(
-                preprocess_config["path"]["preprocessed_path"], "speakers.json"
+                preprocess_config.path.preprocessed_data_path, "speakers.json"
             )
         ) as f:
             speaker_map = json.load(f)
@@ -196,7 +196,7 @@ def main(
         spker_embed = (
             np.load(
                 os.path.join(
-                    preprocess_config["path"]["preprocessed_path"],
+                    preprocess_config.path.preprocessed_data_path,
                     "spker_embed",
                     f"{args.speaker_id}-spker_embed.npy",
                 )
@@ -210,7 +210,7 @@ def main(
         if model_config["multi_emotion"]:
             with open(
                 os.path.join(
-                    preprocess_config["path"]["preprocessed_path"], "emotions.json"
+                    preprocess_config.path.preprocessed_data_path, "emotions.json"
                 )
             ) as f:
                 emotion_map = json.load(f)

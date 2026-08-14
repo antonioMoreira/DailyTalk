@@ -9,9 +9,9 @@ from dailytalk.text import _clean_text
 
 
 def prepare_align(config):
-    in_dir = config["path"]["corpus_path"]
+    in_dir = config["path"]["raw_corpus_path"]
     sub_dir = config["path"]["sub_dir_name"]
-    out_dir = config["path"]["raw_path"]
+    out_dir = config["path"]["intermediate_data_path"]
     sampling_rate = config["preprocessing"]["audio"]["sampling_rate"]
     max_wav_value = config["preprocessing"]["audio"]["max_wav_value"]
     cleaners = config["preprocessing"]["text"]["text_cleaners"]

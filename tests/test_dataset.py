@@ -36,9 +36,9 @@ def dummy_dataset_env(tmp_path):
     preprocess_config, model_config, train_config = get_configs_of("DailyTalk")
 
     # Customize paths to point to our temp directories
-    preprocess_config.path.corpus_path = str(raw_path)
-    preprocess_config.path.raw_path = str(raw_path)
-    preprocess_config.path.preprocessed_path = str(preprocessed_path)
+    preprocess_config.path.raw_corpus_path = str(raw_path)
+    preprocess_config.path.intermediate_data_path = str(raw_path)
+    preprocess_config.path.preprocessed_data_path = str(preprocessed_path)
 
     # Extract tags exactly how get_variance_level does
     pitch_tag, energy_tag, *_ = get_variance_level(preprocess_config, model_config)
@@ -142,7 +142,7 @@ def test_dataset_with_history(dummy_dataset_env):
     model_config.history_encoder.type = "Guo"
 
     # Create the text_emb directory and files
-    preprocessed_path = preprocess_config.path.preprocessed_path
+    preprocessed_path = preprocess_config.path.preprocessed_data_path
     text_emb_dir = os.path.join(preprocessed_path, "text_emb")
     os.makedirs(text_emb_dir, exist_ok=True)
 

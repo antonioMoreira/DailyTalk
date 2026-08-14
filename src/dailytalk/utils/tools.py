@@ -363,7 +363,9 @@ def synth_one_sample(
     else:
         energy = targets[10][0, :mel_len].float().detach().cpu().numpy()
 
-    with open(os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json")) as f:
+    with open(
+        os.path.join(preprocess_config.path.preprocessed_data_path, "stats.json")
+    ) as f:
         stats = json.load(f)
         stats = (
             stats[f"pitch_{pitch_level_tag}"] + stats[f"energy_{energy_level_tag}"][:2]
@@ -433,7 +435,9 @@ def synth_samples(
         else:
             energy = predictions[3][i, :mel_len].detach().cpu().numpy()
 
-        with open(os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json")) as f:
+        with open(
+            os.path.join(preprocess_config.path.preprocessed_data_path, "stats.json")
+        ) as f:
             stats = json.load(f)
             stats = (
                 stats[f"pitch_{pitch_level_tag}"] + stats[f"energy_{energy_level_tag}"][:2]

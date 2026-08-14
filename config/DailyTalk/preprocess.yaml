@@ -1,11 +1,11 @@
 dataset: "DailyTalk"
 
 path:
-  corpus_path: "/home/antonio/Documents/MastersDegree/DailyTalk/raw_data/dailytalk"
+  raw_corpus_path: "/home/antonio/Documents/MastersDegree/DailyTalk/raw_data/dailytalk"
   sub_dir_name: "data"
   lexicon_path: "lexicon/librispeech-lexicon.txt"
-  raw_path: "./raw_data/dailytalk"
-  preprocessed_path: "./raw_data/preprocessed_data/DailyTalk"
+  intermediate_data_path: "./raw_data/dailytalk"
+  preprocessed_data_path: "./raw_data/preprocessed_data/DailyTalk"
 
 preprocessing:
   speaker_embedder: "none" # support 'none', 'DeepSpeaker'
