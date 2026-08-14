@@ -114,6 +114,7 @@ montreal-forced-aligner/
 raw_data/
 preprocessed_data/
 output/
+inference/
 *.npy
 TextGrid/
 hifigan/*.pth.tar

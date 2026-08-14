@@ -15,3 +15,17 @@ path:
   intermediate_data_path: "/home/antonio/Documents/MastersDegree/DailyTalk/raw_data/_dailytalk"
   preprocessed_data_path: "./preprocessed_data/dailytalk"
 ```
+
+```
+.
+└── datasets/
+    └── dailytalk/
+        ├── raw/
+        ├── intermediate/
+        ├── pŕeprocessed/
+        ├── auxiliar/
+        ├── train/
+        ├── test/
+        ├── validation/
+        └── inference/
+```

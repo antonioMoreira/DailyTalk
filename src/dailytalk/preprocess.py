@@ -18,6 +18,7 @@ def main(
     preprocess_config, model_config, train_config = get_configs_of(args.dataset)
     pipeline = PreprocessorPipeline(preprocess_config, model_config, train_config)
 
+    #  uv run src/dailytalk/preprocess.py -d DailyTalk -s preparation
     if stage == "preparation":
         res = pipeline.run_stage_1_preparation()
         typer.echo(f"Stage 1 (Preparation & Cleaning) complete: {res}")
