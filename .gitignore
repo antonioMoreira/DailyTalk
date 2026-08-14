@@ -112,6 +112,7 @@ montreal-forced-aligner/
 
 # data, checkpoint, and models
 raw_data/
+preprocessed_data/
 output/
 *.npy
 TextGrid/

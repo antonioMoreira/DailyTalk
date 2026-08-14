@@ -1,0 +1,17 @@
+- Use `jinja2` to generic YAMLs pipelines and folder structures;
+    - Alternative: [yte](https://github.com/yte-template-engine/yte)
+
+```yaml
+# Jinja2 Variables:
+{% set data_root_path = (env.DATA_PATH | default('/usr/app/data')) %}
+
+dataset: "DailyTalk"
+data_root_path: {{ data_root_path }}
+
+path:
+  raw_corpus_path: "{{}}raw_data/dailytalk"
+  sub_dir_name: "data"
+  lexicon_path: "lexicon/librispeech-lexicon.txt"
+  intermediate_data_path: "/home/antonio/Documents/MastersDegree/DailyTalk/raw_data/_dailytalk"
+  preprocessed_data_path: "./preprocessed_data/dailytalk"
+```
