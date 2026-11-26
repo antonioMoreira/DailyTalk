@@ -1,3 +1,5 @@
+# MODERN DAILYTALK
+
 - Use `jinja2` to generic YAMLs pipelines and folder structures;
     - Alternative: [yte](https://github.com/yte-template-engine/yte)
 
@@ -22,8 +24,9 @@ path:
     └── dailytalk/
         ├── raw/
         ├── intermediate/
-        ├── pŕeprocessed/
+        ├── preprocessed/
         ├── auxiliar/
+           └── lexicon 
         ├── train/
         ├── test/
         ├── validation/

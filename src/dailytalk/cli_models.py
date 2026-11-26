@@ -15,6 +15,10 @@ class PreprocessArgs(BaseModel):
     """Pydantic model representing preprocessing command-line arguments."""
 
     dataset: str = Field(..., description="Name of dataset")
+    stage: Literal["all", "preparation", "language", "features", "speaker"] = Field(
+        "all", description="Preprocessing stage to run"
+    )
+    text: str | None = Field(None, description="Optional sample text for language stage testing")
 
 
 class PrepareAlignArgs(BaseModel):
