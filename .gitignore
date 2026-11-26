@@ -111,10 +111,13 @@ __pycache__
 montreal-forced-aligner/
 
 # data, checkpoint, and models
+datasets
 raw_data/
+preprocessed_data/
 output/
+inference/
 *.npy
 TextGrid/
-hifigan/*.pth.tar
+**/*.pth.tar
 *.out
 deepspeaker/pretrained_models/*

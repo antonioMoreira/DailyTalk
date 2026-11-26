@@ -17,17 +17,19 @@ try:
 except Exception:
     pass
 
-import argparse
 import os
 
 import torch
 import torch.multiprocessing as mp
+import typer
 from torch.distributed import init_process_group
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
+from dailytalk.cli_models import TrainArgs
+from dailytalk.config_models import ModelConfig, PreprocessConfig, TrainConfig
 from dailytalk.dataset import Dataset
 from dailytalk.evaluate import evaluate
 from dailytalk.model import CompTransTTSLoss
@@ -43,7 +45,13 @@ from dailytalk.utils.tools import (
 torch.backends.cudnn.benchmark = True
 
 
-def train(rank, args, configs, batch_size, num_gpus):
+def train(
+    rank: int,
+    args: TrainArgs,
+    configs: tuple[PreprocessConfig, ModelConfig, TrainConfig],
+    batch_size: int,
+    num_gpus: int,
+):
     preprocess_config, model_config, train_config = configs
     if num_gpus > 1:
         init_process_group(
@@ -238,18 +246,17 @@ def train(rank, args, configs, batch_size, num_gpus):
         epoch += 1
 
 
-if __name__ == "__main__":
+app = typer.Typer(help="Train DailyTalk speech synthesis model.")
+
+
+@app.command()
+def main(
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Name of dataset"),
+    use_amp: bool = typer.Option(False, "--use_amp", help="Use automatic mixed precision"),
+    restore_step: int = typer.Option(0, "--restore_step", help="Step number of checkpoint to restore"),
+):
     assert torch.cuda.is_available(), "CPU training is not allowed."
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--use_amp", action="store_true")
-    parser.add_argument("--restore_step", type=int, default=0)
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True,
-        help="name of dataset",
-    )
-    args = parser.parse_args()
+    args = TrainArgs(dataset=dataset, use_amp=use_amp, restore_step=restore_step)
 
     # Read Config
     preprocess_config, model_config, train_config = get_configs_of(args.dataset)
@@ -283,3 +290,7 @@ if __name__ == "__main__":
         mp.spawn(train, nprocs=num_gpus, args=(args, configs, batch_size, num_gpus))
     else:
         train(0, args, configs, batch_size, num_gpus)
+
+
+if __name__ == "__main__":
+    app()

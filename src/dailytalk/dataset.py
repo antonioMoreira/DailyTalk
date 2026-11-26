@@ -13,8 +13,8 @@ class Dataset(Dataset):
         self, filename, preprocess_config, model_config, train_config, sort=False, drop_last=False
     ):
         self.dataset_name = preprocess_config["dataset"]
-        self.preprocessed_path = preprocess_config["path"]["preprocessed_path"]
-        self.raw_path = preprocess_config["path"]["raw_path"]
+        self.preprocessed_path = preprocess_config["path"]["preprocessed_data_path"]
+        self.raw_path = preprocess_config["path"]["intermediate_data_path"]
         self.sub_dir_name = preprocess_config["path"]["sub_dir_name"]
         self.cleaners = preprocess_config["preprocessing"]["text"]["text_cleaners"]
         self.batch_size = train_config["optimizer"]["batch_size"]
@@ -295,8 +295,8 @@ class Dataset(Dataset):
 class TextDataset(Dataset):
     def __init__(self, filepath, preprocess_config, model_config):
         self.cleaners = preprocess_config["preprocessing"]["text"]["text_cleaners"]
-        self.preprocessed_path = preprocess_config["path"]["preprocessed_path"]
-        self.raw_path = preprocess_config["path"]["raw_path"]
+        self.preprocessed_path = preprocess_config["path"]["preprocessed_data_path"]
+        self.raw_path = preprocess_config["path"]["intermediate_data_path"]
         self.sub_dir_name = preprocess_config["path"]["sub_dir_name"]
         self.load_spker_embed = model_config["multi_speaker"] \
             and preprocess_config["preprocessing"]["speaker_embedder"] != 'none'

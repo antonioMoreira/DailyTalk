@@ -34,8 +34,8 @@ def test_invalid_config_raises_validation_error():
         PreprocessConfig.model_validate({
             "dataset": "DailyTalk",
             "path": {
-                "corpus_path": "/path/to/corpus",
-                # missing sub_dir_name, lexicon_path, raw_path, preprocessed_path
+                "raw_corpus_path": "/path/to/corpus",
+                # missing sub_dir_name, lexicon_path, intermediate_data_path, preprocessed_data_path
             },
             "preprocessing": {}
         })

@@ -1,10 +1,14 @@
-""" from https://github.com/keithito/tacotron """
+"""Language-driven text processing and phonemization module."""
 import re
 
 from dailytalk.text import cleaners
-from dailytalk.text.symbols import _punctuation, _silences, symbols
+from dailytalk.text.frontend import get_language_frontend
+from dailytalk.text.languages.base import LanguageFrontend
+from dailytalk.text.languages.english import EnglishFrontend
+from dailytalk.text.languages.portuguese import PortugueseFrontend
+from dailytalk.text.symbols import _silences, symbols
 
-# Mappings from symbol to numeric ID and vice versa:
+# Mappings from symbol to numeric ID and vice versa for backward compatibility:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
 _id_to_symbol = dict(enumerate(symbols))
 
@@ -12,80 +16,51 @@ _id_to_symbol = dict(enumerate(symbols))
 _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
 
 
-def text_to_sequence(text, cleaner_names):
-    """Converts a string of text to a sequence of IDs corresponding to the symbols in the text.
+def clean_text(text, cleaner_names, language="en"):
+    """Clean text using language frontend."""
+    frontend = get_language_frontend(language, cleaner_names)
+    return frontend.clean_text(text)
 
-    The text can optionally have ARPAbet sequences enclosed in curly braces embedded
-    in it. For example, "Turn left on {HH AW1 S S T AH0 N} Street."
 
-    Args:
-      text: string to convert to a sequence
-      cleaner_names: names of the cleaner functions to run the text through
+_clean_text = clean_text
 
-    Returns:
-      List of integers corresponding to the symbols in the text
-    """
-    sequence = []
 
-    # Check for curly braces and treat their contents as ARPAbet:
-    while len(text):
-        m = _curly_re.match(text)
-
-        if not m:
-            sequence += _symbols_to_sequence(_clean_text(text, cleaner_names))
-            break
-        sequence += _symbols_to_sequence(_clean_text(m.group(1), cleaner_names))
-        sequence += _arpabet_to_sequence(m.group(2))
-        text = m.group(3)
-
-    return sequence
+def text_to_sequence(text, cleaner_names, language="en"):
+    """Converts a string of text to a sequence of IDs corresponding to symbols."""
+    frontend = get_language_frontend(language, cleaner_names)
+    return frontend.text_to_sequence(text)
 
 
 def grapheme_to_phoneme(text, g2p):
-    """Converts prapheme to phoneme with punctuation"""
+    """Converts grapheme to phoneme with punctuation."""
     phones = []
     words = filter(None, re.split(r"([,;.\-\?\!\s+])", text))
     for w in words:
-        # if w in _punctuation:
-        #     phones += [w]
-        # else:
         phones += list(filter(lambda p: p != " ", g2p(w)))
     return phones
 
 
-def sequence_to_text(sequence):
-    """Converts a sequence of IDs back to a string"""
-    result = ""
-    for symbol_id in sequence:
-        if symbol_id in _id_to_symbol:
-            s = _id_to_symbol[symbol_id]
-            # Enclose ARPAbet back in curly braces:
-            if len(s) > 1 and s[0] == "@":
-                s = f"{{{s[1:]}}}"
-            result += s
-    return result.replace("}{", " ")
+def sequence_to_text(sequence, language="en"):
+    """Converts a sequence of IDs back to a string."""
+    frontend = get_language_frontend(language)
+    return frontend.sequence_to_text(sequence)
 
 
 def sil_phonemes_ids():
-    return [_symbol_to_id[sil] for sil in _silences]
+    return [_symbol_to_id[sil] for sil in _silences if sil in _symbol_to_id]
 
 
-def _clean_text(text, cleaner_names):
-    for name in cleaner_names:
-        cleaner = getattr(cleaners, name)
-        if not cleaner:
-            raise Exception(f"Unknown cleaner: {name}")
-        text = cleaner(text)
-    return text
-
-
-def _symbols_to_sequence(symbols):
-    return [_symbol_to_id[s] for s in symbols if _should_keep_symbol(s)]
-
-
-def _arpabet_to_sequence(text):
-    return _symbols_to_sequence(["@" + s for s in text.split()])
-
-
-def _should_keep_symbol(s):
-    return s in _symbol_to_id and s != "_" and s != "~"
+__all__ = [
+    "cleaners",
+    "symbols",
+    "clean_text",
+    "_clean_text",
+    "text_to_sequence",
+    "sequence_to_text",
+    "grapheme_to_phoneme",
+    "sil_phonemes_ids",
+    "get_language_frontend",
+    "LanguageFrontend",
+    "EnglishFrontend",
+    "PortugueseFrontend",
+]

@@ -5,11 +5,12 @@ from operator import mul
 import torch
 from local_attention import LocalAttention
 from product_key_memory import PKM
-from dailytalk.text.symbols import symbols
 from torch import nn
 from torch.autograd.function import Function
 from torch.nn import functional as F
 from torch.utils.checkpoint import get_device_states, set_device_states
+
+from dailytalk.text.symbols import symbols
 
 from .blocks import (
     get_sinusoid_encoding_table,

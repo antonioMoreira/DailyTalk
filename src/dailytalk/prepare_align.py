@@ -1,40 +1,25 @@
-# Monkey-patch six to support PEP 451 under Python 3.14+
-try:
-    from importlib.machinery import ModuleSpec
+import typer
 
-    import six
-
-    if not hasattr(six._SixMetaPathImporter, "find_spec"):
-
-        def find_spec(self, fullname, path, target=None):
-            if fullname in self.known_modules:
-                return ModuleSpec(fullname, self, is_package=self.is_package(fullname))
-            return None
-
-        six._SixMetaPathImporter.find_spec = find_spec  # type: ignore
-except Exception:
-    pass
-
-import argparse
-
+from dailytalk.cli_models import PrepareAlignArgs
 from dailytalk.preprocessor import dailytalk
 from dailytalk.utils.tools import get_configs_of
 
+app = typer.Typer(help="Prepare alignment dataset for DailyTalk.")
 
-def main(config):
+
+def prepare_align(config):
     if "DailyTalk" in config["dataset"]:
         dailytalk.prepare_align(config)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True,
-        help="name of dataset",
-    )
-    args = parser.parse_args()
-
+@app.command()
+def main(
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Name of dataset"),
+):
+    args = PrepareAlignArgs(dataset=dataset)
     config, *_ = get_configs_of(args.dataset)
-    main(config)
+    prepare_align(config)
+
+
+if __name__ == "__main__":
+    app()

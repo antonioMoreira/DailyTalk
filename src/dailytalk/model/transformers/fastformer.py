@@ -1,7 +1,8 @@
 import torch
-from dailytalk.text.symbols import symbols
 from torch import nn
 from torch.nn import functional as F
+
+from dailytalk.text.symbols import symbols
 
 from .blocks import (
     get_sinusoid_encoding_table,

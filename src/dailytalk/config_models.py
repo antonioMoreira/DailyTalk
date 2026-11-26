@@ -11,7 +11,7 @@ class ConfigModel(BaseModel):
         try:
             return getattr(self, item)
         except AttributeError:
-            raise KeyError(item)
+            raise KeyError(item) from None
 
     def __contains__(self, item: str) -> bool:
         return hasattr(self, item)
@@ -23,11 +23,11 @@ class ConfigModel(BaseModel):
 # === preprocess.yaml models ===
 
 class PathConfig(ConfigModel):
-    corpus_path: str
+    raw_corpus_path: str
     sub_dir_name: str
     lexicon_path: str
-    raw_path: str
-    preprocessed_path: str
+    intermediate_data_path: str
+    preprocessed_data_path: str
 
 class TextPreprocessingConfig(ConfigModel):
     text_cleaners: list[str]

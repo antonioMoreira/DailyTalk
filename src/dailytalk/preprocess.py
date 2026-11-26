@@ -1,34 +1,44 @@
-# Monkey-patch six to support PEP 451 under Python 3.14+
-try:
-    from importlib.machinery import ModuleSpec
+import typer
 
-    import six
-    # pyrefly: ignore [missing-attribute]
-    if not hasattr(six._SixMetaPathImporter, "find_spec"):
-        def find_spec(self, fullname, path, target=None):
-            if fullname in self.known_modules:
-                return ModuleSpec(fullname, self, is_package=self.is_package(fullname))
-            return None
-        # pyrefly: ignore [missing-attribute]
-        six._SixMetaPathImporter.find_spec = find_spec  # type: ignore
-except Exception:
-    pass
-
-import argparse
-
-from dailytalk.preprocessor.preprocessor import Preprocessor
+from dailytalk.cli_models import PreprocessArgs
+from dailytalk.preprocessor import PreprocessorPipeline
 from dailytalk.utils.tools import get_configs_of
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True,
-        help="name of dataset",
-    )
-    args = parser.parse_args()
+app = typer.Typer(help="Unified Preprocessing Pipeline for DailyTalk.")
 
+
+@app.command()
+def main(
+    dataset: str = typer.Option(..., "--dataset", "-d", help="Name of dataset"),
+    stage: str = typer.Option(
+        "all", "--stage", "-s", help="Stage to execute: 'all', 'preparation', 'language', 'features', 'speaker'"
+    ),
+    text: str | None = typer.Option(None, "--text", "-t", help="Sample text to process for 'language' stage"),
+) -> None:
+    if stage not in ("all", "preparation", "language", "features", "speaker"):
+        raise typer.BadParameter("stage must be 'all', 'preparation', 'language', 'features', or 'speaker'")
+
+    args = PreprocessArgs(dataset=dataset, stage=stage, text=text)  # type: ignore
     preprocess_config, model_config, train_config = get_configs_of(args.dataset)
-    preprocessor = Preprocessor(preprocess_config, model_config, train_config)
-    preprocessor.build_from_path()
+    pipeline = PreprocessorPipeline(preprocess_config, model_config, train_config)
+
+    if args.stage == "preparation":
+        res = pipeline.run_stage_1_preparation()
+        typer.echo(f"Stage 1 (Preparation & Cleaning) complete: {res}")
+    elif args.stage == "language":
+        sample_text = args.text or "Hello world! This is DailyTalk text processing."
+        seq = pipeline.run_stage_2_language_frontend(sample_text)
+        typer.echo(f"Stage 2 (Language Frontend) complete for '{sample_text}':\nSymbol sequence IDs ({len(seq)}): {seq}")
+    elif args.stage == "features":
+        res_feat = pipeline.run_stage_3_feature_extraction()
+        typer.echo(f"Stage 3 (Feature Extraction) complete: {res_feat}")
+    elif args.stage == "speaker":
+        count = pipeline.run_stage_4_speaker_embedding()
+        typer.echo(f"Stage 4 (Speaker Embedding Extraction) complete: {count} embeddings")
+    else:
+        res_all = pipeline.run_all()
+        typer.echo(f"Full Unified Preprocessing Pipeline complete: {res_all}")
+
+
+if __name__ == "__main__":
+    app()
